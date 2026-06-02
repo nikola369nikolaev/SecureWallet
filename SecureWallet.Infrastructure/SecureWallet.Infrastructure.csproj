@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\SecureWallet.Application\SecureWallet.Application.csproj" />
+      <ProjectReference Include="..\SecureWallet.Domain\SecureWallet.Domain.csproj" />
+    </ItemGroup>
+
+</Project>

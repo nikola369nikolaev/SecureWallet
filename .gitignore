@@ -1,0 +1,137 @@
+# Built application files
+*.apk
+*.app
+*.exe
+*.ipa
+*.dll
+*.pdb
+*.com
+*.winmd
+*.mpack
+
+# ASP.NET Scaffolding files
+ScaffoldingReadMe.txt
+
+# MSTest test Results
+[TestResults]/
+
+# NUnit
+*.VisualState.xml
+TestResult.xml
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Roslyn cache directories
+*.ide/
+
+# VS Code directories
+.vscode/
+
+# Rider
+.idea/
+
+# User-specific files
+*.rsuser
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.sln.docstates
+
+# Mono Auto Generated Files
+mono_crash.*
+
+# Windows image file caches
+Thumbs.db
+ehthumbs.db
+
+# Folder config file
+Desktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Windows Installer files
+*.cab
+*.msi
+*.msm
+*.msp
+
+# Windows shortcuts
+*.lnk
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# ASP.NET Core
+!wwwroot/**/*.webmanifest
+!wwwroot/**/*.json
+!wwwroot/**/*.ico
+!wwwroot/**/*.png
+!wwwroot/**/*.svg
+!wwwroot/**/*.jpg
+!wwwroot/**/*.jpeg
+!wwwroot/**/*.css
+!wwwroot/**/*.wasm
+!wwwroot/**/*.html
+
+# Ignore appsettings files
+*/appsettings.json
+*/appsettings.Development.json
+*/appsettings.Production.json
+
+# Visual Studio files
+.vs/
+*.opendb
+*.closedb
+*.db
+
+# User-specific files
+*.rsuser
+*.user
+*.userosscache
+*.suo
+*.userprefs
+
+# Microsoft Office temporary files
+~$*
+
+# Windows Thumbnail cache
+Thumbs.db
+
+# Node Modules
+node_modules/
+
+# Environment Variables
+*.env
+
+# Log files
+*.log
+*.log.*
+
+# Others
+*.cache
+*.bak
+*.swp
+*.tmp
+temp/
+tmp/
+.DS_Store
+__pycache__
+
+schema.graphql
+evaluate-loki/.data/

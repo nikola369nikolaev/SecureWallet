@@ -2,8 +2,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SecureWallet.Application.Interfaces.Repositories;
+using SecureWallet.Application.Interfaces.Security;
 using SecureWallet.Infrastructure.Data;
 using SecureWallet.Infrastructure.Repositories;
+using SecureWallet.Infrastructure.Security;
 
 namespace SecureWallet.Infrastructure;
 
@@ -21,6 +23,8 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IWalletRepository, WalletRepository>();
         services.AddScoped<ITransactionRepository, TransactionRepository>();
+        services.AddScoped<IPasswordHasher, PasswordHasher>();
+        services.AddScoped<IJwtTokenService, JwtTokenService>();
 
         return services;
     }

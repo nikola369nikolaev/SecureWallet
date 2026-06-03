@@ -69,7 +69,7 @@ public class AuthController : ControllerBase
             {
                 message = exception.Message,
                 requiresCaptcha = exception.RequiresCaptcha,
-                captchaCode = exception.CaptchaCode,
+                captchaImageBase64 = exception.CaptchaImageBase64,
                 lockoutSeconds = exception.LockoutSeconds
             });
         }

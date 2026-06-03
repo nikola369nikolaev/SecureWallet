@@ -11,8 +11,7 @@ public class LoginUserHandler
 {
     private const int CaptchaRequiredAttempts = 3;
     private const int FirstLockoutAttempts = 5;
-    private static readonly TimeSpan FirstLockoutDuration = TimeSpan.FromSeconds(30);
-    private static readonly TimeSpan RepeatedLockoutDuration = TimeSpan.FromSeconds(35);
+    private const int FirstLockoutSeconds = 30;
 
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
@@ -49,7 +48,7 @@ public class LoginUserHandler
             throw new LoginProtectionException(
                 $"Too many failed login attempts. Try again in {remainingSeconds} seconds.",
                 user.FailedLoginAttempts >= CaptchaRequiredAttempts,
-                user.CurrentCaptchaCode,
+                CreateCaptchaImageBase64(user.CurrentCaptchaCode),
                 remainingSeconds);
         }
 
@@ -154,15 +153,10 @@ public class LoginUserHandler
         }
 
         int? lockoutSeconds = null;
-        if (user.FailedLoginAttempts == FirstLockoutAttempts)
+        if (user.FailedLoginAttempts >= FirstLockoutAttempts)
         {
-            user.LockoutEndUtc = now.Add(FirstLockoutDuration);
-            lockoutSeconds = (int)FirstLockoutDuration.TotalSeconds;
-        }
-        else if (user.FailedLoginAttempts >= FirstLockoutAttempts + 1)
-        {
-            user.LockoutEndUtc = now.Add(RepeatedLockoutDuration);
-            lockoutSeconds = (int)RepeatedLockoutDuration.TotalSeconds;
+            lockoutSeconds = CalculateLockoutSeconds(user.FailedLoginAttempts);
+            user.LockoutEndUtc = now.AddSeconds(lockoutSeconds.Value);
         }
         else
         {
@@ -176,7 +170,7 @@ public class LoginUserHandler
             return new LoginProtectionException(
                 $"Too many failed login attempts. The login is locked for {lockoutSeconds.Value} seconds.",
                 requiresCaptcha,
-                user.CurrentCaptchaCode,
+                CreateCaptchaImageBase64(user.CurrentCaptchaCode),
                 lockoutSeconds);
         }
 
@@ -189,9 +183,30 @@ public class LoginUserHandler
             return new LoginProtectionException(
                 message,
                 true,
-                user.CurrentCaptchaCode);
+                CreateCaptchaImageBase64(user.CurrentCaptchaCode));
         }
 
         return new LoginProtectionException(defaultMessage);
+    }
+
+    private string? CreateCaptchaImageBase64(string? captchaCode)
+    {
+        if (string.IsNullOrEmpty(captchaCode))
+        {
+            return null;
+        }
+
+        return _captchaVerificationService.GenerateCaptchaImageBase64(captchaCode);
+    }
+
+    private static int CalculateLockoutSeconds(int failedLoginAttempts)
+    {
+        if (failedLoginAttempts < FirstLockoutAttempts)
+        {
+            return 0;
+        }
+
+        int exponent = failedLoginAttempts - FirstLockoutAttempts;
+        return FirstLockoutSeconds * (int)Math.Pow(2, exponent);
     }
 }

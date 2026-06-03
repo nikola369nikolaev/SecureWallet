@@ -5,18 +5,18 @@ public class LoginProtectionException : InvalidOperationException
     public LoginProtectionException(
         string message,
         bool requiresCaptcha = false,
-        string? captchaCode = null,
+        string? captchaImageBase64 = null,
         int? lockoutSeconds = null)
         : base(message)
     {
         RequiresCaptcha = requiresCaptcha;
-        CaptchaCode = captchaCode;
+        CaptchaImageBase64 = captchaImageBase64;
         LockoutSeconds = lockoutSeconds;
     }
 
     public bool RequiresCaptcha { get; }
 
-    public string? CaptchaCode { get; }
+    public string? CaptchaImageBase64 { get; }
 
     public int? LockoutSeconds { get; }
 }

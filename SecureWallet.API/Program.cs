@@ -1,5 +1,6 @@
 using SecureWallet.Application;
 using SecureWallet.Infrastructure;
+using SecureWallet.Infrastructure.Data.Seed;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +10,8 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddOpenApi();
 
 WebApplication app = builder.Build();
+
+await RoleSeeder.SeedDefaultRolesAsync(app.Services);
 
 if (app.Environment.IsDevelopment())
 {

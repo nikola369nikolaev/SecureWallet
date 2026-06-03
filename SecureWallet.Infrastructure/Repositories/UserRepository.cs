@@ -24,22 +24,22 @@ public class UserRepository : IUserRepository
 
     public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
-        string upperEmail = email.ToUpperInvariant();
+        string lowerEmail = email.ToLowerInvariant();
 
         return await _appDbContext.Users
             .AsNoTracking()
             .Include(user => user.Role)
-            .FirstOrDefaultAsync(user => user.Email.ToUpper() == upperEmail, cancellationToken);
+            .FirstOrDefaultAsync(user => user.Email.ToLower() == lowerEmail, cancellationToken);
     }
 
     public async Task<User?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default)
     {
-        string upperUsername = username.ToUpperInvariant();
+        string lowerUsername = username.ToLowerInvariant();
 
         return await _appDbContext.Users
             .AsNoTracking()
             .Include(user => user.Role)
-            .FirstOrDefaultAsync(user => user.Username.ToUpper() == upperUsername, cancellationToken);
+            .FirstOrDefaultAsync(user => user.Username.ToLower() == lowerUsername, cancellationToken);
     }
 
     public async Task AddAsync(User user, CancellationToken cancellationToken = default)

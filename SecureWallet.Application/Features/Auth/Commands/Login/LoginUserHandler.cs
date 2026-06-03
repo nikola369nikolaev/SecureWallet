@@ -1,4 +1,5 @@
 using SecureWallet.Application.Features.Auth.DTOs;
+using SecureWallet.Application.Features.Auth.Validators;
 using SecureWallet.Application.Interfaces.Repositories;
 using SecureWallet.Application.Interfaces.Security;
 
@@ -24,11 +25,11 @@ public class LoginUserHandler
         LoginUserCommand command,
         CancellationToken cancellationToken = default)
     {
-        // Normalize the email so login checks use the same format as registration.
-        string normalizedEmail = command.Email.Trim().ToLowerInvariant();
+        AuthInputValidator.ValidateEmail(command.Email);
+        AuthInputValidator.ValidateRequiredField(command.Password, "Password");
 
         // Login starts by finding the account that matches the supplied email.
-        Domain.Entities.User? user = await _userRepository.GetByEmailAsync(normalizedEmail, cancellationToken);
+        Domain.Entities.User? user = await _userRepository.GetByEmailAsync(command.Email, cancellationToken);
         if (user is null)
         {
             throw new InvalidOperationException("Invalid email or password.");

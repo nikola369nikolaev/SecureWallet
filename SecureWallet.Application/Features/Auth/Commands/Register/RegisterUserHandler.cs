@@ -35,19 +35,21 @@ public class RegisterUserHandler
             throw new InvalidOperationException(string.Join(" ", validationErrors));
         }
 
-        // Normalize user input so uniqueness checks and persistence stay consistent.
-        string normalizedEmail = command.Email.Trim().ToLowerInvariant();
-        string normalizedUsername = command.Username.Trim();
-        string? normalizedPhoneNumber = command.PhoneNumber?.Trim();
+        AuthInputValidator.ValidateEmail(command.Email);
+        AuthInputValidator.ValidateUsername(command.Username);
+        AuthInputValidator.ValidatePhoneNumber(command.PhoneNumber);
+        AuthInputValidator.ValidateRequiredField(command.Password, "Password");
+        AuthInputValidator.ValidateOptionalNoLeadingOrTrailingWhitespace(command.FirstName, "First name");
+        AuthInputValidator.ValidateOptionalNoLeadingOrTrailingWhitespace(command.LastName, "Last name");
 
         // Block duplicate accounts by email or username before creating the user.
-        User? existingUserByEmail = await _userRepository.GetByEmailAsync(normalizedEmail, cancellationToken);
+        User? existingUserByEmail = await _userRepository.GetByEmailAsync(command.Email, cancellationToken);
         if (existingUserByEmail is not null)
         {
             throw new InvalidOperationException("A user with this email already exists.");
         }
 
-        User? existingUserByUsername = await _userRepository.GetByUsernameAsync(normalizedUsername, cancellationToken);
+        User? existingUserByUsername = await _userRepository.GetByUsernameAsync(command.Username, cancellationToken);
         if (existingUserByUsername is not null)
         {
             throw new InvalidOperationException("A user with this username already exists.");
@@ -62,12 +64,12 @@ public class RegisterUserHandler
         // Hash the password before storing it so we never persist the raw secret.
         User user = new()
         {
-            Username = normalizedUsername,
-            Email = normalizedEmail,
+            Username = command.Username,
+            Email = command.Email,
             Password = _passwordHasher.Hash(command.Password),
-            PhoneNumber = normalizedPhoneNumber,
-            FirstName = command.FirstName?.Trim(),
-            LastName = command.LastName?.Trim(),
+            PhoneNumber = command.PhoneNumber,
+            FirstName = command.FirstName,
+            LastName = command.LastName,
             RoleId = userRole.Id,
             Role = userRole
         };

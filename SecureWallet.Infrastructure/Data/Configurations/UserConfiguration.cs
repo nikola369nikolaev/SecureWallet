@@ -39,6 +39,12 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(user => user.TwoFactorEnabled)
             .IsRequired();
 
+        builder.Property(user => user.FailedLoginAttempts)
+            .IsRequired();
+
+        builder.Property(user => user.CurrentCaptchaCode)
+            .HasMaxLength(4);
+
         builder.Property(user => user.CreatedAtUtc)
             .IsRequired();
 

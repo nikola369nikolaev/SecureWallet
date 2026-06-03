@@ -10,13 +10,13 @@ public class AppDbContext : DbContext
     {
     }
 
-    public DbSet<User> Users => Set<User>();
+    public DbSet<User> Users { get; set; }
 
-    public DbSet<Role> Roles => Set<Role>();
+    public DbSet<Role> Roles { get; set; }
 
-    public DbSet<Wallet> Wallets => Set<Wallet>();
+    public DbSet<Wallet> Wallets { get; set; }
 
-    public DbSet<Transaction> Transactions => Set<Transaction>();
+    public DbSet<Transaction> Transactions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -20,6 +20,12 @@ public class User
 
     public bool TwoFactorEnabled { get; set; }
 
+    public int FailedLoginAttempts { get; set; }
+
+    public string? CurrentCaptchaCode { get; set; }
+
+    public DateTime? LockoutEndUtc { get; set; }
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;

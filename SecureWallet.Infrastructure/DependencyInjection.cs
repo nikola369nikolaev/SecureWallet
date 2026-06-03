@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.AddScoped<ITransactionRepository, TransactionRepository>();
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
+        services.AddScoped<ICaptchaVerificationService, TestCaptchaVerificationService>();
 
         return services;
     }

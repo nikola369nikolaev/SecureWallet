@@ -1,8 +1,10 @@
+using SecureWallet.Application;
 using SecureWallet.Infrastructure;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddOpenApi();
 

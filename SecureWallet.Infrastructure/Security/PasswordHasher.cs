@@ -20,7 +20,7 @@ public class PasswordHasher : IPasswordHasher
 
     public bool Verify(string password, string hashedPassword)
     {
-        var result = _passwordHasher.VerifyHashedPassword(new User(), hashedPassword, password);
+        PasswordVerificationResult result = _passwordHasher.VerifyHashedPassword(new User(), hashedPassword, password);
 
         return result == PasswordVerificationResult.Success ||
                result == PasswordVerificationResult.SuccessRehashNeeded;

@@ -11,7 +11,7 @@ public static class PasswordValidator
 
     public static IReadOnlyCollection<string> Validate(string? password)
     {
-        var errors = new List<string>();
+        List<string> errors = new();
 
         if (string.IsNullOrWhiteSpace(password))
         {

@@ -1,0 +1,178 @@
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { requestPasswordResetCode, verifyPasswordResetCode } from '../../api/authApi';
+import { ApiError } from '../../api/httpClient';
+
+const RESET_SESSION_STORAGE_KEY = 'securewallet.auth.passwordReset';
+
+export function ResetPasswordPage() {
+  const navigate = useNavigate();
+  const [formState, setFormState] = useState({
+    email: '',
+    phoneNumber: '',
+    code: '',
+  });
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [developmentCodePreview, setDevelopmentCodePreview] = useState('');
+  const [canEnterCode, setCanEnterCode] = useState(false);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
+
+  function updateField(field, value) {
+    setFormState((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+  async function handleSendCode(event) {
+    event.preventDefault();
+    setErrorMessage('');
+    setSuccessMessage('');
+    setDevelopmentCodePreview('');
+    setIsSendingCode(true);
+
+    try {
+      const result = await requestPasswordResetCode({
+        email: formState.email,
+        phoneNumber: formState.phoneNumber,
+      });
+
+      setCanEnterCode(Boolean(result.canEnterCode));
+      setDevelopmentCodePreview(result.developmentCodePreview ?? '');
+      setSuccessMessage(result.message ?? 'SMS кодът беше изпратен успешно.');
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setErrorMessage(error.payload?.message ?? error.message);
+      } else {
+        setErrorMessage('Възникна неочаквана грешка при изпращане на SMS кода.');
+      }
+    } finally {
+      setIsSendingCode(false);
+    }
+  }
+
+  async function handleVerifyCode(event) {
+    event.preventDefault();
+    setErrorMessage('');
+    setSuccessMessage('');
+    setIsVerifyingCode(true);
+
+    try {
+      const result = await verifyPasswordResetCode({
+        email: formState.email,
+        phoneNumber: formState.phoneNumber,
+        code: formState.code,
+      });
+
+      window.sessionStorage.setItem(
+        RESET_SESSION_STORAGE_KEY,
+        JSON.stringify({
+          resetSessionToken: result.resetSessionToken,
+          email: result.email,
+        }),
+      );
+
+      navigate('/reset-password/confirm', { replace: true });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setErrorMessage(error.payload?.message ?? error.message);
+      } else {
+        setErrorMessage('Възникна неочаквана грешка при проверка на SMS кода.');
+      }
+    } finally {
+      setIsVerifyingCode(false);
+    }
+  }
+
+  return (
+    <main className="auth-page auth-page--register">
+      <section className="hero-panel hero-panel--warm">
+        <p className="eyebrow">SecureWallet</p>
+        <h1>Върни достъпа до профила си чрез телефон и SMS код.</h1>
+        <p className="hero-copy">
+          За да смениш паролата, първо трябва да докажеш, че email-ът и телефонът принадлежат на един и същ акаунт.
+          След това ще получиш SMS код и чак тогава ще преминеш към новата парола.
+        </p>
+        <div className="hero-note-grid">
+          <div className="hero-note">
+            <strong>Проверка на акаунт</strong>
+            <span>Код изпращаме само ако email-ът съществува и телефонът е свързан точно с него.</span>
+          </div>
+          <div className="hero-note">
+            <strong>Подготовка за бъдеще</strong>
+            <span>Този поток е подготвен за реален SMS provider и по-късно за 2FA приложения.</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="form-panel">
+        <div className="panel-header">
+          <p className="eyebrow">Забравена парола</p>
+          <h2>Потвърди акаунта си</h2>
+          <p>Въведи email и телефонен номер в +359 формат, след което поискай SMS код.</p>
+        </div>
+
+        <form className="auth-form" onSubmit={handleSendCode}>
+          <label className="field-group">
+            <span>Email</span>
+            <input
+              type="email"
+              value={formState.email}
+              onChange={(event) => updateField('email', event.target.value)}
+              placeholder="nikola@example.com"
+              autoComplete="email"
+            />
+          </label>
+
+          <label className="field-group">
+            <span>Телефонен номер</span>
+            <input
+              type="text"
+              value={formState.phoneNumber}
+              onChange={(event) => updateField('phoneNumber', event.target.value)}
+              placeholder="+359888123456"
+              autoComplete="tel"
+            />
+          </label>
+
+          <button className="secondary-button" type="submit" disabled={isSendingCode}>
+            {isSendingCode ? 'Изпращане...' : 'Изпрати SMS'}
+          </button>
+        </form>
+
+        <form className="auth-form" onSubmit={handleVerifyCode}>
+          <label className="field-group">
+            <span>Код от SMS</span>
+            <input
+              type="text"
+              value={formState.code}
+              onChange={(event) => updateField('code', event.target.value)}
+              placeholder="Въведи получения код"
+              disabled={!canEnterCode}
+            />
+          </label>
+
+          {developmentCodePreview && (
+            <div className="message-box message-box--info">
+              Тестов SMS код за момента: <strong>{developmentCodePreview}</strong>
+            </div>
+          )}
+
+          {errorMessage && <div className="message-box message-box--error">{errorMessage}</div>}
+          {successMessage && <div className="message-box message-box--success">{successMessage}</div>}
+
+          <button className="primary-button" type="submit" disabled={!canEnterCode || isVerifyingCode}>
+            {isVerifyingCode ? 'Проверка...' : 'Потвърди кода'}
+          </button>
+        </form>
+
+        <div className="panel-footer panel-footer--split">
+          <Link to="/login">Назад към вход</Link>
+          <Link to="/register">Създай нов акаунт</Link>
+        </div>
+      </section>
+    </main>
+  );
+}

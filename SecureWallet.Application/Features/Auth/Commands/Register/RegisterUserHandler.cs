@@ -70,8 +70,7 @@ public class RegisterUserHandler
             PhoneNumber = command.PhoneNumber,
             FirstName = command.FirstName,
             LastName = command.LastName,
-            RoleId = userRole.Id,
-            Role = userRole
+            RoleId = userRole.Id
         };
 
         // First persist the user, then create the initial wallet linked to that user.
@@ -80,7 +79,6 @@ public class RegisterUserHandler
         Wallet wallet = new()
         {
             UserId = user.Id,
-            User = user,
             Balance = 0m
         };
 

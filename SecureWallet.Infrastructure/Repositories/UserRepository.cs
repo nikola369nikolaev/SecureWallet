@@ -32,6 +32,17 @@ public class UserRepository : IUserRepository
             .FirstOrDefaultAsync(user => user.Email.ToLower() == lowerEmail, cancellationToken);
     }
 
+    public async Task<User?> GetByEmailAndPhoneNumberAsync(string email, string phoneNumber, CancellationToken cancellationToken = default)
+    {
+        string lowerEmail = email.ToLowerInvariant();
+
+        return await _appDbContext.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                user => user.Email.ToLower() == lowerEmail && user.PhoneNumber == phoneNumber,
+                cancellationToken);
+    }
+
     public async Task<User?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default)
     {
         string lowerUsername = username.ToLowerInvariant();
@@ -40,6 +51,13 @@ public class UserRepository : IUserRepository
             .AsNoTracking()
             .Include(user => user.Role)
             .FirstOrDefaultAsync(user => user.Username.ToLower() == lowerUsername, cancellationToken);
+    }
+
+    public async Task<User?> GetByPasswordResetSessionTokenAsync(string sessionToken, CancellationToken cancellationToken = default)
+    {
+        return await _appDbContext.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(user => user.PasswordResetSessionToken == sessionToken, cancellationToken);
     }
 
     public async Task AddAsync(User user, CancellationToken cancellationToken = default)

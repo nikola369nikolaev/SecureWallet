@@ -26,6 +26,14 @@ public class User
 
     public DateTime? LockoutEndUtc { get; set; }
 
+    public string? PasswordResetCodeHash { get; set; }
+
+    public DateTime? PasswordResetCodeExpiresAtUtc { get; set; }
+
+    public string? PasswordResetSessionToken { get; set; }
+
+    public DateTime? PasswordResetSessionExpiresAtUtc { get; set; }
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;

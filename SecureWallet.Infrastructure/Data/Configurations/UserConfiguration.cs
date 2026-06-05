@@ -45,6 +45,12 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(user => user.CurrentCaptchaCode)
             .HasMaxLength(4);
 
+        builder.Property(user => user.PasswordResetCodeHash)
+            .HasMaxLength(512);
+
+        builder.Property(user => user.PasswordResetSessionToken)
+            .HasMaxLength(64);
+
         builder.Property(user => user.CreatedAtUtc)
             .IsRequired();
 

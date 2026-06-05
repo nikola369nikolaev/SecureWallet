@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<ICaptchaVerificationService, TestCaptchaVerificationService>();
+        services.AddScoped<ISmsVerificationService, TestSmsVerificationService>();
 
         return services;
     }

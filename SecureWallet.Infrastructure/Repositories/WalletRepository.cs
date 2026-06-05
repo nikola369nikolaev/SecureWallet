@@ -19,6 +19,7 @@ public class WalletRepository : IWalletRepository
         return await _appDbContext.Wallets
             .AsNoTracking()
             .Include(wallet => wallet.User)
+            .ThenInclude(user => user!.Role)
             .FirstOrDefaultAsync(wallet => wallet.Id == walletId, cancellationToken);
     }
 
@@ -27,6 +28,7 @@ public class WalletRepository : IWalletRepository
         return await _appDbContext.Wallets
             .AsNoTracking()
             .Include(wallet => wallet.User)
+            .ThenInclude(user => user!.Role)
             .FirstOrDefaultAsync(wallet => wallet.UserId == userId, cancellationToken);
     }
 

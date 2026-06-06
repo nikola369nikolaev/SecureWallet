@@ -92,17 +92,17 @@ export function ResetPasswordPage() {
         <p className="eyebrow">SecureWallet</p>
         <h1>Върни достъпа до профила си чрез телефон и SMS код.</h1>
         <p className="hero-copy">
-          За да смениш паролата, първо трябва да докажеш, че email-ът и телефонът принадлежат на един и същ акаунт.
+          За да смениш паролата, първо трябва да докажеш, че имейлът и телефонът принадлежат на един и същ акаунт.
           След това ще получиш SMS код и чак тогава ще преминеш към новата парола.
         </p>
         <div className="hero-note-grid">
           <div className="hero-note">
             <strong>Проверка на акаунт</strong>
-            <span>Код изпращаме само ако email-ът съществува и телефонът е свързан точно с него.</span>
+            <span>Код изпращаме само ако имейлът съществува и телефонът е свързан точно с него.</span>
           </div>
           <div className="hero-note">
-            <strong>Подготовка за бъдеще</strong>
-            <span>Този поток е подготвен за реален SMS provider и по-късно за 2FA приложения.</span>
+            <strong>Защита на кода</strong>
+            <span>При 3 грешни опита с reset кода процесът се блокира за 15 минути.</span>
           </div>
         </div>
       </section>
@@ -111,12 +111,12 @@ export function ResetPasswordPage() {
         <div className="panel-header">
           <p className="eyebrow">Забравена парола</p>
           <h2>Потвърди акаунта си</h2>
-          <p>Въведи email и телефонен номер в +359 формат, след което поискай SMS код.</p>
+          <p>Въведи email и телефонен номер в +359 формат, след което поискай SMS код. Имаш максимум 3 грешни опита за кода.</p>
         </div>
 
         <form className="auth-form" onSubmit={handleSendCode}>
           <label className="field-group">
-            <span>Email</span>
+            <span>Имейл</span>
             <input
               type="email"
               value={formState.email}

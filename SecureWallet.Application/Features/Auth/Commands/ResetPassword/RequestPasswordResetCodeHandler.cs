@@ -1,4 +1,4 @@
-using SecureWallet.Application.Features.Auth.DTOs;
+﻿using SecureWallet.Application.Features.Auth.DTOs;
 using SecureWallet.Application.Features.Auth.Validators;
 using SecureWallet.Application.Interfaces.Repositories;
 using SecureWallet.Application.Interfaces.Security;
@@ -8,6 +8,8 @@ namespace SecureWallet.Application.Features.Auth.Commands.ResetPassword;
 
 public class RequestPasswordResetCodeHandler
 {
+    private static readonly TimeSpan PasswordResetCodeLifetime = TimeSpan.FromMinutes(5);
+
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ISmsVerificationService _smsVerificationService;
@@ -31,7 +33,12 @@ public class RequestPasswordResetCodeHandler
 
         if (user is null)
         {
-            throw new InvalidOperationException("No account was found for this email and phone number.");
+            throw new InvalidOperationException("Не беше намерен акаунт с този имейл и телефонен номер.");
+        }
+
+        if (user.PasswordResetCodeLockoutEndUtc is not null && user.PasswordResetCodeLockoutEndUtc.Value > DateTime.UtcNow)
+        {
+            throw new InvalidOperationException("Смяната на паролата е временно заключена. Опитай отново след 15 минути.");
         }
 
         string resetCode = GenerateResetCode();
@@ -39,7 +46,9 @@ public class RequestPasswordResetCodeHandler
                 .SendPasswordResetCodeAsync(user.PhoneNumber!, resetCode, cancellationToken);
 
         user.PasswordResetCodeHash = _passwordHasher.Hash(resetCode);
-        user.PasswordResetCodeExpiresAtUtc = DateTime.UtcNow.AddMinutes(5);
+        user.PasswordResetCodeExpiresAtUtc = DateTime.UtcNow.Add(PasswordResetCodeLifetime);
+        user.FailedPasswordResetCodeAttempts = 0;
+        user.PasswordResetCodeLockoutEndUtc = null;
         user.PasswordResetSessionToken = null;
         user.PasswordResetSessionExpiresAtUtc = null;
         user.UpdatedAtUtc = DateTime.UtcNow;

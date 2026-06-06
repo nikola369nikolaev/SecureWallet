@@ -1,4 +1,4 @@
-namespace SecureWallet.Application.Features.Auth.Validators;
+﻿namespace SecureWallet.Application.Features.Auth.Validators;
 
 public static class PasswordValidator
 {
@@ -15,23 +15,23 @@ public static class PasswordValidator
 
         if (string.IsNullOrWhiteSpace(password))
         {
-            errors.Add("Password is required.");
+            errors.Add("Паролата е задължително поле.");
             return errors;
         }
 
         if (password.Length < MinimumLength)
         {
-            errors.Add($"Password must be at least {MinimumLength} characters long.");
+            errors.Add($"Паролата трябва да е поне {MinimumLength} символа.");
         }
 
         if (!password.Any(char.IsUpper))
         {
-            errors.Add("Password must contain at least one uppercase letter.");
+            errors.Add("Паролата трябва да съдържа поне една главна буква.");
         }
 
         if (!password.Any(char.IsDigit))
         {
-            errors.Add("Password must contain at least one number.");
+            errors.Add("Паролата трябва да съдържа поне една цифра.");
         }
 
         return errors;

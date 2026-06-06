@@ -108,7 +108,7 @@ export function ResetPasswordConfirmPage() {
         <p className="eyebrow">SecureWallet</p>
         <h1>Задай новата парола на потвърдения акаунт.</h1>
         <p className="hero-copy">
-          Сега вече сменяш старата парола точно на акаунта с email <strong>{resetSession?.email ?? '-'}</strong>.
+          Сега вече сменяш старата парола точно на акаунта с имейл <strong>{resetSession?.email ?? '-'}</strong>.
         </p>
       </section>
 

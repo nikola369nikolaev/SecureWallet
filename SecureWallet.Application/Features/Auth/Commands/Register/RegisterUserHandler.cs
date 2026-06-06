@@ -1,4 +1,4 @@
-using SecureWallet.Application.Features.Auth.DTOs;
+﻿using SecureWallet.Application.Features.Auth.DTOs;
 using SecureWallet.Application.Features.Auth.Validators;
 using SecureWallet.Application.Interfaces.Repositories;
 using SecureWallet.Application.Interfaces.Security;
@@ -38,27 +38,27 @@ public class RegisterUserHandler
         AuthInputValidator.ValidateEmail(command.Email);
         AuthInputValidator.ValidateUsername(command.Username);
         AuthInputValidator.ValidatePhoneNumber(command.PhoneNumber);
-        AuthInputValidator.ValidateRequiredField(command.Password, "Password");
-        AuthInputValidator.ValidateOptionalNoLeadingOrTrailingWhitespace(command.FirstName, "First name");
-        AuthInputValidator.ValidateOptionalNoLeadingOrTrailingWhitespace(command.LastName, "Last name");
+        AuthInputValidator.ValidateRequiredField(command.Password, "Парола");
+        AuthInputValidator.ValidatePersonName(command.FirstName ?? string.Empty, "Собственото име");
+        AuthInputValidator.ValidatePersonName(command.LastName ?? string.Empty, "Фамилията");
 
         // Block duplicate accounts by email or username before creating the user.
         User? existingUserByEmail = await _userRepository.GetByEmailAsync(command.Email, cancellationToken);
         if (existingUserByEmail is not null)
         {
-            throw new InvalidOperationException("A user with this email already exists.");
+            throw new InvalidOperationException("Вече съществува акаунт с този имейл.");
         }
 
         User? existingUserByUsername = await _userRepository.GetByUsernameAsync(command.Username, cancellationToken);
         if (existingUserByUsername is not null)
         {
-            throw new InvalidOperationException("A user with this username already exists.");
+            throw new InvalidOperationException("Вече съществува акаунт с това потребителско име.");
         }
 
         Role? userRole = await _roleRepository.GetByNameAsync("User", cancellationToken);
         if (userRole is null)
         {
-            throw new InvalidOperationException("Default user role was not found.");
+            throw new InvalidOperationException("Ролята User не беше намерена.");
         }
 
         // Hash the password before storing it so we never persist the raw secret.

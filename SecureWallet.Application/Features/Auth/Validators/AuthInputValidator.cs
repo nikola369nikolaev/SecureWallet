@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace SecureWallet.Application.Features.Auth.Validators;
 
@@ -10,7 +10,7 @@ public static class AuthInputValidator
     {
         if (string.IsNullOrWhiteSpace(value))
         {
-            throw new InvalidOperationException($"{fieldName} is required.");
+            throw new InvalidOperationException($"{fieldName} е задължително поле.");
         }
     }
 
@@ -18,7 +18,7 @@ public static class AuthInputValidator
     {
         if (value != value.Trim())
         {
-            throw new InvalidOperationException($"{fieldName} must not start or end with whitespace.");
+            throw new InvalidOperationException($"{fieldName} не трябва да започва или да завършва с интервали.");
         }
     }
 
@@ -31,29 +31,29 @@ public static class AuthInputValidator
 
         if (value != value.Trim())
         {
-            throw new InvalidOperationException($"{fieldName} must not start or end with whitespace.");
+            throw new InvalidOperationException($"{fieldName} не трябва да започва или да завършва с интервали.");
         }
     }
 
     public static void ValidateEmail(string email)
     {
-        ValidateRequiredField(email, "Email");
-        ValidateNoLeadingOrTrailingWhitespace(email, "Email");
+        ValidateRequiredField(email, "Имейл");
+        ValidateNoLeadingOrTrailingWhitespace(email, "Имейл");
 
         if (!EmailValidator.IsValid(email))
         {
-            throw new InvalidOperationException("Email format is invalid.");
+            throw new InvalidOperationException("Имейл адресът не е в правилен формат.");
         }
     }
 
     public static void ValidateUsername(string username)
     {
-        ValidateRequiredField(username, "Username");
-        ValidateNoLeadingOrTrailingWhitespace(username, "Username");
+        ValidateRequiredField(username, "Потребителското име");
+        ValidateNoLeadingOrTrailingWhitespace(username, "Потребителското име");
 
         if (username.Length < 3 || username.Length > 30)
         {
-            throw new InvalidOperationException("Username must be between 3 and 30 characters long.");
+            throw new InvalidOperationException("Потребителското име трябва да е между 3 и 30 символа.");
         }
 
         bool hasInvalidCharacter = username.Any(character =>
@@ -64,13 +64,13 @@ public static class AuthInputValidator
         if (hasInvalidCharacter)
         {
             throw new InvalidOperationException(
-                "Username may contain only Latin letters, digits, underscores, and dots.");
+                "Потребителското име може да съдържа само латински букви, цифри, долна черта и точка.");
         }
     }
 
     public static void ValidatePhoneNumber(string? phoneNumber)
     {
-        ValidateOptionalNoLeadingOrTrailingWhitespace(phoneNumber, "Phone number");
+        ValidateOptionalNoLeadingOrTrailingWhitespace(phoneNumber, "Телефонният номер");
 
         if (string.IsNullOrWhiteSpace(phoneNumber))
         {
@@ -79,19 +79,30 @@ public static class AuthInputValidator
 
         if (!phoneNumber.StartsWith('+'))
         {
-            throw new InvalidOperationException("Phone number must start with '+'.");
+            throw new InvalidOperationException("Телефонният номер трябва да започва с '+'.");
         }
 
         string digits = phoneNumber[1..];
 
         if (digits.Length < 8 || digits.Length > 15)
         {
-            throw new InvalidOperationException("Phone number must contain between 8 and 15 digits after '+'.");
+            throw new InvalidOperationException("Телефонният номер трябва да съдържа между 8 и 15 цифри след '+'.");
         }
 
         if (!digits.All(char.IsDigit))
         {
-            throw new InvalidOperationException("Phone number must start with '+' and contain only digits after it.");
+            throw new InvalidOperationException("Телефонният номер трябва да започва с '+' и след него да има само цифри.");
+        }
+    }
+
+    public static void ValidatePersonName(string value, string fieldName)
+    {
+        ValidateRequiredField(value, fieldName);
+        ValidateNoLeadingOrTrailingWhitespace(value, fieldName);
+
+        if (value.Any(char.IsDigit))
+        {
+            throw new InvalidOperationException($"{fieldName} не трябва да съдържа цифри.");
         }
     }
 }

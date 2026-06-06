@@ -1,25 +1,47 @@
-import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
+﻿import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { LoginPage } from '../features/login/LoginPage';
 import { RegisterPage } from '../features/register/RegisterPage';
+import { VerifyEmailPage } from '../features/register/VerifyEmailPage';
 import { ResetPasswordConfirmPage } from '../features/reset-password/ResetPasswordConfirmPage';
 import { ResetPasswordPage } from '../features/reset-password/ResetPasswordPage';
+import { SettingsPage } from '../features/settings/SettingsPage';
 import { TwoFactorSetupPage } from '../features/two-factor/TwoFactorSetupPage';
 
-function ProtectedRoute() {
+function AuthenticatedRoute() {
   const { isAuthenticated } = useAuth();
   return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
 }
 
+function CompletedSecurityRoute() {
+  const { isAuthenticated, session } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return session?.securitySetupRequired ? <Navigate to="/security/two-factor" replace /> : <Outlet />;
+}
+
 function PublicRoute() {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Outlet />;
+  const { isAuthenticated, session } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Outlet />;
+  }
+
+  return <Navigate to={session?.securitySetupRequired ? '/security/two-factor' : '/dashboard'} replace />;
 }
 
 function RootRedirect() {
-  const { isAuthenticated } = useAuth();
-  return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />;
+  const { isAuthenticated, session } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <Navigate to={session?.securitySetupRequired ? '/security/two-factor' : '/dashboard'} replace />;
 }
 
 export function AppRouter() {
@@ -31,13 +53,18 @@ export function AppRouter() {
         <Route element={<PublicRoute />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/register/verify-email" element={<VerifyEmailPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/reset-password/confirm" element={<ResetPasswordConfirmPage />} />
         </Route>
 
-        <Route element={<ProtectedRoute />}>
-          <Route path="/dashboard" element={<DashboardPage />} />
+        <Route element={<AuthenticatedRoute />}>
           <Route path="/security/two-factor" element={<TwoFactorSetupPage />} />
+        </Route>
+
+        <Route element={<CompletedSecurityRoute />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -18,6 +18,12 @@ public class User
 
     public bool IsActive { get; set; } = true;
 
+    public bool IsEmailVerified { get; set; } = true;
+
+    public string? EmailVerificationCodeHash { get; set; }
+
+    public DateTime? EmailVerificationCodeExpiresAtUtc { get; set; }
+
     public bool TwoFactorEnabled { get; set; }
 
     public int FailedLoginAttempts { get; set; }

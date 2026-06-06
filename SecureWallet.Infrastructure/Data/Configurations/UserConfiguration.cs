@@ -36,6 +36,12 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(user => user.IsActive)
             .IsRequired();
 
+        builder.Property(user => user.IsEmailVerified)
+            .IsRequired();
+
+        builder.Property(user => user.EmailVerificationCodeHash)
+            .HasMaxLength(512);
+
         builder.Property(user => user.TwoFactorEnabled)
             .IsRequired();
 

@@ -1,7 +1,9 @@
 ﻿namespace SecureWallet.Application.Features.Auth.DTOs;
 
-public class LoginResultDto
+public class EmailVerificationResultDto
 {
+    public string Message { get; set; } = string.Empty;
+
     public string AccessToken { get; set; } = string.Empty;
 
     public DateTime ExpiresAtUtc { get; set; }

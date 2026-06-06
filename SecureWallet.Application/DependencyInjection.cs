@@ -1,8 +1,9 @@
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using SecureWallet.Application.Features.Auth.Commands.Login;
 using SecureWallet.Application.Features.Auth.Commands.Register;
 using SecureWallet.Application.Features.Auth.Commands.ResetPassword;
 using SecureWallet.Application.Features.Auth.Commands.Totp;
+using SecureWallet.Application.Features.Auth.Commands.VerifyEmail;
 using SecureWallet.Application.Features.Wallets.Queries.GetCurrentUserWallet;
 
 namespace SecureWallet.Application;
@@ -16,6 +17,8 @@ public static class DependencyInjection
         services.AddScoped<RequestPasswordResetCodeHandler>();
         services.AddScoped<VerifyPasswordResetCodeHandler>();
         services.AddScoped<ResetPasswordHandler>();
+        services.AddScoped<VerifyEmailCodeHandler>();
+        services.AddScoped<ResendEmailVerificationCodeHandler>();
         services.AddScoped<BeginTotpSetupHandler>();
         services.AddScoped<VerifyTotpSetupHandler>();
         services.AddScoped<DisableTotpHandler>();

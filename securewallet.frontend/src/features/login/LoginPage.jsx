@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { loginUser } from '../../api/authApi';
 import { ApiError } from '../../api/httpClient';
@@ -56,7 +56,7 @@ export function LoginPage() {
       });
 
       setSession(result);
-      navigate('/dashboard', { replace: true });
+      navigate(result.securitySetupRequired ? '/security/two-factor' : '/dashboard', { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
         const nextRequiresTotp = Boolean(error.payload?.requiresTotp);
@@ -77,7 +77,7 @@ export function LoginPage() {
         setFormState((current) => ({
           ...current,
           password: isTotpStepPrompt || nextRequiresTotp ? current.password : '',
-          captchaToken: nextRequiresCaptcha ? current.captchaToken : '',
+          captchaToken: '',
           totpCode: nextRequiresTotp ? '' : current.totpCode,
         }));
       } else {
@@ -94,17 +94,17 @@ export function LoginPage() {
         <p className="eyebrow">SecureWallet</p>
         <h1>Влез в своя защитен дигитален портфейл.</h1>
         <p className="hero-copy">
-          Това е първият работещ frontend екран към нашия auth backend. През него тестваш входа,
-          визуализацията на captcha защитата, TOTP двуфакторната защита и поведението при временен lockout след грешни опити.
+          Тук тестваш входа, captcha защитата, двуфакторния код от authenticator приложението
+          и поведението на системата при временен lockout след грешни опити.
         </p>
         <div className="hero-note-grid">
           <div className="hero-note">
-            <strong>JWT вход</strong>
-            <span>При успешен вход token-ът се пази локално и ни държи в активна потребителска сесия.</span>
+            <strong>Имейл + парола</strong>
+            <span>Първо проверяваме имейла, паролата и дали акаунтът вече е потвърдил имейла си.</span>
           </div>
           <div className="hero-note">
-            <strong>2FA и captcha</strong>
-            <span>При включена двуфакторна защита системата иска код от authenticator приложение, а при грешни опити включва captcha.</span>
+            <strong>Captcha и 2FA</strong>
+            <span>При нужда системата иска captcha и след това код от authenticator приложението.</span>
           </div>
         </div>
       </section>
@@ -113,7 +113,7 @@ export function LoginPage() {
         <div className="panel-header">
           <p className="eyebrow">Вход</p>
           <h2>Влез в профила си</h2>
-          <p>Въведи регистрирания имейл и паролата си, за да продължиш към таблото.</p>
+          <p>Въведи регистрирания имейл и паролата си, за да продължиш към защитената част.</p>
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
@@ -192,6 +192,10 @@ export function LoginPage() {
           </span>
           <Link to="/reset-password">Забравена парола</Link>
         </div>
+
+        <p className="panel-footer">
+          Имаш код за потвърждение? <Link to="/register/verify-email">Въведи го оттук</Link>
+        </p>
       </section>
     </main>
   );

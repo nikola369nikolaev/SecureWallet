@@ -4,11 +4,18 @@ import { getCurrentWallet } from '../../api/walletApi';
 import { ApiError } from '../../api/httpClient';
 import { useAuth } from '../../auth/AuthContext';
 
-function formatStatus(value) {
-  return value ? 'Потвърден' : 'Непотвърден';
+function formatDateTime(value) {
+  if (!value) {
+    return '-';
+  }
+
+  return new Intl.DateTimeFormat('bg-BG', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
 }
 
-export function DashboardPage() {
+export function SettingsPage() {
   const { session, logout } = useAuth();
   const navigate = useNavigate();
   const [wallet, setWallet] = useState(null);
@@ -51,7 +58,7 @@ export function DashboardPage() {
           return;
         }
 
-        setErrorMessage(error instanceof ApiError ? error.message : 'Възникна грешка при зареждане на портфейла.');
+        setErrorMessage(error instanceof ApiError ? error.message : 'Възникна грешка при зареждане на настройките.');
       } finally {
         if (isActive) {
           setIsLoading(false);
@@ -66,27 +73,6 @@ export function DashboardPage() {
     };
   }, [logout, navigate, session?.accessToken]);
 
-  const formattedBalance = wallet
-    ? new Intl.NumberFormat('bg-BG', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(wallet.balance)
-    : '';
-
-  const formattedCreatedAt = wallet?.createdAtUtc
-    ? new Intl.DateTimeFormat('bg-BG', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      }).format(new Date(wallet.createdAtUtc))
-    : '';
-
-  const formattedSessionExpiry = session?.expiresAtUtc
-    ? new Intl.DateTimeFormat('bg-BG', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      }).format(new Date(session.expiresAtUtc))
-    : '-';
-
   const emailVerified = wallet?.isEmailVerified ?? session?.isEmailVerified ?? false;
 
   return (
@@ -94,62 +80,45 @@ export function DashboardPage() {
       <section className="dashboard-shell">
         <div className="dashboard-header">
           <div>
-            <p className="eyebrow">Начало</p>
-            <h1>Добре дошъл, {wallet?.username ?? session?.username}</h1>
+            <p className="eyebrow">Още / Настройки</p>
+            <h1>Профил и сигурност</h1>
             <p className="dashboard-copy">
-              Това е текущият начален екран на портфейла. Данните идват от защитен backend endpoint,
-              а не от временен debug изглед.
+              Тук събираме статусите, които са важни за сигурността на акаунта и се вземат от backend-а.
             </p>
           </div>
-          <button className="secondary-button" onClick={logout} type="button">
-            Изход
-          </button>
+          <Link className="secondary-link-button" to="/dashboard">
+            Назад към началото
+          </Link>
         </div>
 
         {errorMessage && <div className="message-box message-box--error">{errorMessage}</div>}
 
         <div className="dashboard-grid">
           <article className="dashboard-card">
-            <h2>Портфейл</h2>
+            <h2>Акаунт</h2>
             <dl>
               <div>
-                <dt>Баланс</dt>
-                <dd>{isLoading ? 'Зареждане...' : `${formattedBalance} ${wallet?.currency ?? ''}`.trim()}</dd>
+                <dt>Потребителско име</dt>
+                <dd>{isLoading ? 'Зареждане...' : wallet?.username ?? session?.username ?? '-'}</dd>
               </div>
               <div>
-                <dt>Валута</dt>
-                <dd>{isLoading ? 'Зареждане...' : wallet?.currency ?? '-'}</dd>
+                <dt>Имейл</dt>
+                <dd>{isLoading ? 'Зареждане...' : wallet?.email ?? session?.email ?? '-'}</dd>
               </div>
               <div>
-                <dt>Статус</dt>
-                <dd>{isLoading ? 'Зареждане...' : wallet?.isActive ? 'Активен' : 'Неактивен'}</dd>
-              </div>
-              <div>
-                <dt>Създаден на</dt>
-                <dd>{isLoading ? 'Зареждане...' : formattedCreatedAt || '-'}</dd>
+                <dt>Имейл потвърждение</dt>
+                <dd>
+                  <span className={emailVerified ? 'status-pill status-pill--success' : 'status-pill status-pill--pending'}>
+                    {emailVerified ? 'Потвърден' : 'Непотвърден'}
+                  </span>
+                </dd>
               </div>
             </dl>
           </article>
 
           <article className="dashboard-card">
-            <h2>Профил</h2>
+            <h2>Сигурност</h2>
             <dl>
-              <div>
-                <dt>Потребителско име</dt>
-                <dd>{wallet?.username ?? session?.username}</dd>
-              </div>
-              <div>
-                <dt>Имейл</dt>
-                <dd>{wallet?.email ?? session?.email}</dd>
-              </div>
-              <div>
-                <dt>Имейл статус</dt>
-                <dd>
-                  <span className={emailVerified ? 'status-pill status-pill--success' : 'status-pill status-pill--pending'}>
-                    {formatStatus(emailVerified)}
-                  </span>
-                </dd>
-              </div>
               <div>
                 <dt>2FA статус</dt>
                 <dd>
@@ -160,16 +129,17 @@ export function DashboardPage() {
               </div>
               <div>
                 <dt>Сесия до</dt>
-                <dd>{formattedSessionExpiry}</dd>
+                <dd>{formatDateTime(session?.expiresAtUtc)}</dd>
+              </div>
+              <div>
+                <dt>Портфейл създаден на</dt>
+                <dd>{isLoading ? 'Зареждане...' : formatDateTime(wallet?.createdAtUtc)}</dd>
               </div>
             </dl>
 
             <div className="inline-action-row">
               <Link className="secondary-link-button" to="/security/two-factor">
-                Настрой TOTP
-              </Link>
-              <Link className="secondary-link-button" to="/settings">
-                Още / Настройки
+                Управлявай TOTP
               </Link>
             </div>
           </article>

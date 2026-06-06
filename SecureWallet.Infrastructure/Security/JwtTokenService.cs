@@ -1,8 +1,9 @@
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using SecureWallet.Application.Features.Auth;
 using SecureWallet.Application.Interfaces.Security;
 using SecureWallet.Domain.Entities;
 
@@ -17,7 +18,7 @@ public class JwtTokenService : IJwtTokenService
         _configuration = configuration;
     }
 
-    public string GenerateAccessToken(User user)
+    public string GenerateAccessToken(User user, bool securitySetupRequired = false)
     {
         string key = _configuration["Jwt:Key"]
             ?? throw new InvalidOperationException("JWT key was not found.");
@@ -28,20 +29,13 @@ public class JwtTokenService : IJwtTokenService
         string audience = _configuration["Jwt:Audience"]
             ?? throw new InvalidOperationException("JWT audience was not found.");
 
-        string expirationMinutesValue = _configuration["Jwt:AccessTokenExpirationMinutes"]
-            ?? throw new InvalidOperationException("JWT access token expiration was not found.");
-
-        if (!int.TryParse(expirationMinutesValue, out int expirationMinutes))
-        {
-            throw new InvalidOperationException("JWT access token expiration is invalid.");
-        }
-
         List<Claim> claims = new()
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Email, user.Email),
             new(JwtRegisteredClaimNames.UniqueName, user.Username),
-            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new(AuthClaimNames.SecuritySetupRequired, securitySetupRequired.ToString().ToLowerInvariant())
         };
 
         if (!string.IsNullOrWhiteSpace(user.Role?.Name))
@@ -55,7 +49,7 @@ public class JwtTokenService : IJwtTokenService
         SecurityTokenDescriptor tokenDescriptor = new()
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddMinutes(expirationMinutes),
+            Expires = GetAccessTokenExpiresAtUtc(),
             Issuer = issuer,
             Audience = audience,
             SigningCredentials = signingCredentials
@@ -65,5 +59,23 @@ public class JwtTokenService : IJwtTokenService
         SecurityToken securityToken = tokenHandler.CreateToken(tokenDescriptor);
 
         return tokenHandler.WriteToken(securityToken);
+    }
+
+    public DateTime GetAccessTokenExpiresAtUtc()
+    {
+        return DateTime.UtcNow.AddMinutes(GetAccessTokenExpirationMinutes());
+    }
+
+    private int GetAccessTokenExpirationMinutes()
+    {
+        string expirationMinutesValue = _configuration["Jwt:AccessTokenExpirationMinutes"]
+            ?? throw new InvalidOperationException("JWT access token expiration was not found.");
+
+        if (!int.TryParse(expirationMinutesValue, out int expirationMinutes))
+        {
+            throw new InvalidOperationException("JWT access token expiration is invalid.");
+        }
+
+        return expirationMinutes;
     }
 }

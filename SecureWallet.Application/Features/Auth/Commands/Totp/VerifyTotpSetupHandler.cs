@@ -10,11 +10,16 @@ public class VerifyTotpSetupHandler
 {
     private readonly IUserRepository _userRepository;
     private readonly ITotpService _totpService;
+    private readonly IJwtTokenService _jwtTokenService;
 
-    public VerifyTotpSetupHandler(IUserRepository userRepository, ITotpService totpService)
+    public VerifyTotpSetupHandler(
+        IUserRepository userRepository,
+        ITotpService totpService,
+        IJwtTokenService jwtTokenService)
     {
         _userRepository = userRepository;
         _totpService = totpService;
+        _jwtTokenService = jwtTokenService;
     }
 
     public async Task<TotpVerificationResultDto> Handle(VerifyTotpSetupCommand command, CancellationToken cancellationToken = default)
@@ -46,10 +51,20 @@ public class VerifyTotpSetupHandler
 
         await _userRepository.UpdateAsync(user, cancellationToken);
 
+        string accessToken = _jwtTokenService.GenerateAccessToken(user);
+
         return new TotpVerificationResultDto
         {
             Message = "Двуфакторната защита беше включена успешно.",
-            TwoFactorEnabled = true
+            TwoFactorEnabled = true,
+            AccessToken = accessToken,
+            ExpiresAtUtc = _jwtTokenService.GetAccessTokenExpiresAtUtc(),
+            UserId = user.Id,
+            Username = user.Username,
+            Email = user.Email,
+            Role = user.Role?.Name ?? string.Empty,
+            IsEmailVerified = user.IsEmailVerified,
+            SecuritySetupRequired = false
         };
     }
 }

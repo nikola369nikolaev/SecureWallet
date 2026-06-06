@@ -45,6 +45,11 @@ public class LoginUserHandler
             throw new InvalidOperationException("Грешен имейл или парола.");
         }
 
+        if (!user.IsEmailVerified)
+        {
+            throw new InvalidOperationException("Имейлът на този акаунт още не е потвърден. Завърши имейл верификацията и после настрой двуфакторната защита.");
+        }
+
         if (user.LockoutEndUtc.HasValue && user.LockoutEndUtc.Value > now)
         {
             int remainingSeconds = (int)Math.Ceiling((user.LockoutEndUtc.Value - now).TotalSeconds);
@@ -112,61 +117,74 @@ public class LoginUserHandler
             throw invalidPasswordException;
         }
 
-        if (user.TwoFactorEnabled)
+        if (!user.TwoFactorEnabled)
         {
-            bool requiresCaptcha = user.FailedLoginAttempts >= CaptchaRequiredAttempts;
-            string? captchaImageBase64 = CreateCaptchaImageBase64(user.CurrentCaptchaCode);
-
-            if (string.IsNullOrWhiteSpace(command.TotpCode))
-            {
-                throw new LoginProtectionException(
-                    "Нужен е код от authenticator приложението.",
-                    requiresCaptcha,
-                    true,
-                    captchaImageBase64,
-                    null);
-            }
-
-            bool isTotpCodeValid = !string.IsNullOrWhiteSpace(user.TotpSecret) &&
-                                   _totpService.VerifyCode(user.TotpSecret, command.TotpCode);
-
-            if (!isTotpCodeValid)
-            {
-                LoginProtectionException invalidTotpException = await RegisterFailedAttemptAsync(
-                    user,
-                    now,
-                    "Кодът от authenticator приложението е грешен.",
-                    cancellationToken,
-                    true);
-
-                throw invalidTotpException;
-            }
+            await ClearLoginProtectionStateAsync(user, now, cancellationToken);
+            return CreateSessionResult(user, true);
         }
 
-        if (user.FailedLoginAttempts > 0 ||
-            user.LockoutEndUtc.HasValue ||
-            !string.IsNullOrEmpty(user.CurrentCaptchaCode))
+        if (string.IsNullOrWhiteSpace(command.TotpCode))
         {
-            user.FailedLoginAttempts = 0;
-            user.CurrentCaptchaCode = null;
-            user.LockoutEndUtc = null;
-            user.UpdatedAtUtc = now;
-
-            await _userRepository.UpdateAsync(user, cancellationToken);
+            throw new LoginProtectionException(
+                "Нужен е код от authenticator приложението.",
+                user.FailedLoginAttempts >= CaptchaRequiredAttempts,
+                true,
+                CreateCaptchaImageBase64(user.CurrentCaptchaCode),
+                null);
         }
 
-        string accessToken = _jwtTokenService.GenerateAccessToken(user);
+        bool isTotpCodeValid = !string.IsNullOrWhiteSpace(user.TotpSecret) &&
+                               _totpService.VerifyCode(user.TotpSecret, command.TotpCode);
+
+        if (!isTotpCodeValid)
+        {
+            LoginProtectionException invalidTotpException = await RegisterFailedAttemptAsync(
+                user,
+                now,
+                "Кодът от authenticator приложението е грешен.",
+                cancellationToken,
+                true);
+
+            throw invalidTotpException;
+        }
+
+        await ClearLoginProtectionStateAsync(user, now, cancellationToken);
+        return CreateSessionResult(user, false);
+    }
+
+    private LoginResultDto CreateSessionResult(User user, bool securitySetupRequired)
+    {
+        string accessToken = _jwtTokenService.GenerateAccessToken(user, securitySetupRequired);
 
         return new LoginResultDto
         {
             AccessToken = accessToken,
-            ExpiresAtUtc = DateTime.UtcNow.AddMinutes(60),
+            ExpiresAtUtc = _jwtTokenService.GetAccessTokenExpiresAtUtc(),
             UserId = user.Id,
             Username = user.Username,
             Email = user.Email,
             Role = user.Role?.Name ?? string.Empty,
-            TwoFactorEnabled = user.TwoFactorEnabled
+            TwoFactorEnabled = user.TwoFactorEnabled,
+            IsEmailVerified = user.IsEmailVerified,
+            SecuritySetupRequired = securitySetupRequired
         };
+    }
+
+    private async Task ClearLoginProtectionStateAsync(User user, DateTime now, CancellationToken cancellationToken)
+    {
+        if (user.FailedLoginAttempts == 0 &&
+            !user.LockoutEndUtc.HasValue &&
+            string.IsNullOrEmpty(user.CurrentCaptchaCode))
+        {
+            return;
+        }
+
+        user.FailedLoginAttempts = 0;
+        user.CurrentCaptchaCode = null;
+        user.LockoutEndUtc = null;
+        user.UpdatedAtUtc = now;
+
+        await _userRepository.UpdateAsync(user, cancellationToken);
     }
 
     private async Task<LoginProtectionException> RegisterFailedAttemptAsync(

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { beginTotpSetup, disableTotp, resetTotpSetup, verifyTotpSetup } from '../../api/authApi';
 import { ApiError } from '../../api/httpClient';
@@ -16,6 +16,20 @@ export function TwoFactorSetupPage() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [isDisabling, setIsDisabling] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+
+  const isSecuritySetupRequired = Boolean(session?.securitySetupRequired);
+
+  const headerTitle = useMemo(() => {
+    return isSecuritySetupRequired ? 'Последна стъпка: включи двуфакторната защита' : 'Двуфакторна защита с TOTP';
+  }, [isSecuritySetupRequired]);
+
+  const headerCopy = useMemo(() => {
+    if (isSecuritySetupRequired) {
+      return 'Преди да отвориш портфейла си, трябва да сканираш QR кода и да потвърдиш 6-цифрения код от authenticator приложението.';
+    }
+
+    return 'TOTP е безплатен алгоритъм за еднократни кодове и работи с Google Authenticator, Microsoft Authenticator и други подобни приложения.';
+  }, [isSecuritySetupRequired]);
 
   useEffect(() => {
     let isActive = true;
@@ -74,6 +88,24 @@ export function TwoFactorSetupPage() {
 
     try {
       const result = await verifyTotpSetup({ code: verifyCode }, session.accessToken);
+      setVerifyCode('');
+
+      if (result.accessToken) {
+        setSession({
+          accessToken: result.accessToken,
+          expiresAtUtc: result.expiresAtUtc,
+          userId: result.userId,
+          username: result.username,
+          email: result.email,
+          role: result.role,
+          twoFactorEnabled: result.twoFactorEnabled,
+          isEmailVerified: result.isEmailVerified,
+          securitySetupRequired: result.securitySetupRequired,
+        });
+
+        navigate('/dashboard', { replace: true });
+        return;
+      }
 
       setSuccessMessage(result.message ?? 'Двуфакторната защита беше включена успешно.');
       setSetupState((current) =>
@@ -85,11 +117,12 @@ export function TwoFactorSetupPage() {
             }
           : current,
       );
-      setVerifyCode('');
 
       setSession({
         ...session,
         twoFactorEnabled: true,
+        isEmailVerified: session?.isEmailVerified ?? true,
+        securitySetupRequired: false,
       });
     } catch (error) {
       if (error instanceof ApiError) {
@@ -158,15 +191,19 @@ export function TwoFactorSetupPage() {
         <div className="dashboard-header">
           <div>
             <p className="eyebrow">Сигурност</p>
-            <h1>Двуфакторна защита с TOTP</h1>
-            <p className="dashboard-copy">
-              TOTP е безплатен алгоритъм за еднократни кодове и работи с Google Authenticator,
-              Microsoft Authenticator и други подобни приложения.
-            </p>
+            <h1>{headerTitle}</h1>
+            <p className="dashboard-copy">{headerCopy}</p>
           </div>
-          <Link className="secondary-link-button" to="/dashboard">
-            Назад към таблото
-          </Link>
+
+          {isSecuritySetupRequired ? (
+            <button className="secondary-button" onClick={logout} type="button">
+              Изход
+            </button>
+          ) : (
+            <Link className="secondary-link-button" to="/dashboard">
+              Назад към таблото
+            </Link>
+          )}
         </div>
 
         {errorMessage && <div className="message-box message-box--error">{errorMessage}</div>}
@@ -174,12 +211,11 @@ export function TwoFactorSetupPage() {
 
         {isLoading && <div className="dashboard-card">Зареждане на TOTP настройката...</div>}
 
-        {!isLoading && setupState?.isAlreadyEnabled && (
+        {!isLoading && setupState?.isAlreadyEnabled && !setupState?.canShowQrCode && !isSecuritySetupRequired && (
           <article className="dashboard-card totp-card">
             <h2>2FA вече е включена</h2>
             <p className="dashboard-copy">
-              Въведи текущия код от authenticator приложението, ако искаш да изключиш 2FA или да подготвиш
-              нов QR код за същия акаунт.
+              Въведи текущия код от authenticator приложението, ако искаш да изключиш 2FA или да подготвиш нов QR код за същия акаунт.
             </p>
 
             <label className="field-group">
@@ -232,8 +268,7 @@ export function TwoFactorSetupPage() {
           <article className="dashboard-card totp-card totp-card--verify">
             <h2>3. Потвърди кода</h2>
             <p className="dashboard-copy">
-              След като приложението започне да показва 6-цифрен код, въведи го тук, за да включим
-              двуфакторната защита за акаунта.
+              След като приложението започне да показва 6-цифрен код, въведи го тук, за да включим двуфакторната защита за акаунта.
             </p>
 
             <form className="auth-form" onSubmit={handleVerify}>

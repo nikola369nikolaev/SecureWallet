@@ -8,26 +8,30 @@ namespace SecureWallet.Application.Features.Auth.Commands.Register;
 
 public class RegisterUserHandler
 {
+    private static readonly TimeSpan EmailVerificationCodeLifetime = TimeSpan.FromMinutes(10);
+
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
     private readonly IWalletRepository _walletRepository;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly IEmailVerificationSender _emailVerificationSender;
 
     public RegisterUserHandler(
         IUserRepository userRepository,
         IRoleRepository roleRepository,
         IWalletRepository walletRepository,
-        IPasswordHasher passwordHasher)
+        IPasswordHasher passwordHasher,
+        IEmailVerificationSender emailVerificationSender)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
         _walletRepository = walletRepository;
         _passwordHasher = passwordHasher;
+        _emailVerificationSender = emailVerificationSender;
     }
 
     public async Task<RegisterResultDto> Handle(RegisterUserCommand command, CancellationToken cancellationToken = default)
     {
-        // Reject weak passwords before we create any user records.
         IReadOnlyCollection<string> validationErrors = PasswordValidator.Validate(command.Password);
 
         if (validationErrors.Count > 0)
@@ -42,7 +46,6 @@ public class RegisterUserHandler
         AuthInputValidator.ValidatePersonName(command.FirstName ?? string.Empty, "Собственото име");
         AuthInputValidator.ValidatePersonName(command.LastName ?? string.Empty, "Фамилията");
 
-        // Block duplicate accounts by email or username before creating the user.
         User? existingUserByEmail = await _userRepository.GetByEmailAsync(command.Email, cancellationToken);
         if (existingUserByEmail is not null)
         {
@@ -61,7 +64,9 @@ public class RegisterUserHandler
             throw new InvalidOperationException("Ролята User не беше намерена.");
         }
 
-        // Hash the password before storing it so we never persist the raw secret.
+        string emailVerificationCode = GenerateVerificationCode();
+        DateTime expiresAtUtc = DateTime.UtcNow.Add(EmailVerificationCodeLifetime);
+
         User user = new()
         {
             Username = command.Username,
@@ -70,10 +75,13 @@ public class RegisterUserHandler
             PhoneNumber = command.PhoneNumber,
             FirstName = command.FirstName,
             LastName = command.LastName,
-            RoleId = userRole.Id
+            RoleId = userRole.Id,
+            Role = userRole,
+            IsEmailVerified = false,
+            EmailVerificationCodeHash = _passwordHasher.Hash(emailVerificationCode),
+            EmailVerificationCodeExpiresAtUtc = expiresAtUtc
         };
 
-        // First persist the user, then create the initial wallet linked to that user.
         await _userRepository.AddAsync(user, cancellationToken);
 
         Wallet wallet = new()
@@ -83,13 +91,22 @@ public class RegisterUserHandler
         };
 
         await _walletRepository.AddAsync(wallet, cancellationToken);
+        await _emailVerificationSender.SendRegistrationVerificationCodeAsync(user.Email, emailVerificationCode, cancellationToken);
 
-        // Return only the public data the caller needs after successful registration.
         return new RegisterResultDto
         {
             UserId = user.Id,
             Username = user.Username,
-            Email = user.Email
+            Email = user.Email,
+            Message = "Изпратихме код за потвърждение на имейла. Въведи го, за да продължиш към двуфакторната защита.",
+            RequiresEmailVerification = true,
+            SecuritySetupRequired = true
         };
+    }
+
+    private static string GenerateVerificationCode()
+    {
+        int code = Random.Shared.Next(100000, 999999);
+        return code.ToString();
     }
 }

@@ -41,7 +41,7 @@ export function RegisterPage() {
     }
 
     if (nextValue.startsWith(BG_PHONE_PREFIX)) {
-      let subscriberNumber = nextValue
+      const subscriberNumber = nextValue
         .slice(BG_PHONE_PREFIX.length)
         .replace(/\D/g, '')
         .slice(0, BG_PHONE_DIGITS_LENGTH);
@@ -62,7 +62,7 @@ export function RegisterPage() {
   }
 
   function validatePhoneNumber() {
-    let subscriberNumber = formState.phoneNumber.startsWith(BG_PHONE_PREFIX)
+    const subscriberNumber = formState.phoneNumber.startsWith(BG_PHONE_PREFIX)
       ? formState.phoneNumber.slice(BG_PHONE_PREFIX.length)
       : '';
 
@@ -96,10 +96,13 @@ export function RegisterPage() {
     setIsSubmitting(true);
 
     try {
-      await registerUser(formState);
-      navigate('/login', {
+      const result = await registerUser(formState);
+      navigate('/register/verify-email', {
         replace: true,
-        state: { email: formState.email },
+        state: {
+          email: result.email ?? formState.email,
+          message: result.message,
+        },
       });
     } catch (error) {
       if (error instanceof ApiError) {
@@ -118,17 +121,17 @@ export function RegisterPage() {
         <p className="eyebrow">SecureWallet</p>
         <h1>Създай профил и влез в своя дигитален портфейл.</h1>
         <p className="hero-copy">
-          Формата за регистрация е свързана директно с backend validation слоя. След успешна
-          регистрация системата създава потребител и начален портфейл за него.
+          След регистрация ще получиш код за потвърждение на имейла, а след това ще преминеш
+          към задължителната настройка на двуфакторната защита.
         </p>
         <div className="hero-note-grid">
           <div className="hero-note">
-            <strong>Сигурна парола</strong>
-            <span>Изискваме 8 символа, поне една главна буква и поне една цифра.</span>
+            <strong>Имейл потвърждение</strong>
+            <span>Изпращаме код до въведения имейл, независимо дали е abv.bg, gmail.com или друг домейн.</span>
           </div>
           <div className="hero-note">
-            <strong>Телефон</strong>
-            <span>Телефонът започва с + и по-късно ще ни трябва за SMS защита.</span>
+            <strong>Сигурна парола</strong>
+            <span>Изискваме поне 8 символа, поне една главна буква и поне една цифра.</span>
           </div>
         </div>
       </section>
@@ -137,7 +140,7 @@ export function RegisterPage() {
         <div className="panel-header">
           <p className="eyebrow">Регистрация</p>
           <h2>Създай акаунт</h2>
-          <p>Попълни данните внимателно. Backend-ът ще създаде и началния wallet.</p>
+          <p>Попълни данните внимателно. След това ще потвърдим имейла и ще настроиш TOTP.</p>
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>

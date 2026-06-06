@@ -6,6 +6,7 @@ using SecureWallet.Application.Features.Auth.Commands.Login;
 using SecureWallet.Application.Features.Auth.Commands.Register;
 using SecureWallet.Application.Features.Auth.Commands.ResetPassword;
 using SecureWallet.Application.Features.Auth.Commands.Totp;
+using SecureWallet.Application.Features.Auth.Commands.VerifyEmail;
 using SecureWallet.Application.Features.Auth.DTOs;
 using SecureWallet.Application.Features.Auth.Exceptions;
 
@@ -16,6 +17,8 @@ namespace SecureWallet.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly RegisterUserHandler _registerUserHandler;
+    private readonly VerifyEmailCodeHandler _verifyEmailCodeHandler;
+    private readonly ResendEmailVerificationCodeHandler _resendEmailVerificationCodeHandler;
     private readonly LoginUserHandler _loginUserHandler;
     private readonly RequestPasswordResetCodeHandler _requestPasswordResetCodeHandler;
     private readonly VerifyPasswordResetCodeHandler _verifyPasswordResetCodeHandler;
@@ -27,6 +30,8 @@ public class AuthController : ControllerBase
 
     public AuthController(
         RegisterUserHandler registerUserHandler,
+        VerifyEmailCodeHandler verifyEmailCodeHandler,
+        ResendEmailVerificationCodeHandler resendEmailVerificationCodeHandler,
         LoginUserHandler loginUserHandler,
         RequestPasswordResetCodeHandler requestPasswordResetCodeHandler,
         VerifyPasswordResetCodeHandler verifyPasswordResetCodeHandler,
@@ -37,6 +42,8 @@ public class AuthController : ControllerBase
         ResetTotpSetupHandler resetTotpSetupHandler)
     {
         _registerUserHandler = registerUserHandler;
+        _verifyEmailCodeHandler = verifyEmailCodeHandler;
+        _resendEmailVerificationCodeHandler = resendEmailVerificationCodeHandler;
         _loginUserHandler = loginUserHandler;
         _requestPasswordResetCodeHandler = requestPasswordResetCodeHandler;
         _verifyPasswordResetCodeHandler = verifyPasswordResetCodeHandler;
@@ -65,6 +72,53 @@ public class AuthController : ControllerBase
         try
         {
             RegisterResultDto result = await _registerUserHandler.Handle(command, cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+    }
+
+    [HttpPost("verify-email")]
+    [ProducesResponseType(typeof(EmailVerificationResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<EmailVerificationResultDto>> VerifyEmail(
+        [FromBody] VerifyEmailCodeRequest request,
+        CancellationToken cancellationToken)
+    {
+        VerifyEmailCodeCommand command = new()
+        {
+            Email = request.Email,
+            Code = request.Code
+        };
+
+        try
+        {
+            EmailVerificationResultDto result = await _verifyEmailCodeHandler.Handle(command, cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+    }
+
+    [HttpPost("verify-email/resend")]
+    [ProducesResponseType(typeof(EmailVerificationCodeDispatchResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<EmailVerificationCodeDispatchResultDto>> ResendEmailVerificationCode(
+        [FromBody] ResendEmailVerificationCodeRequest request,
+        CancellationToken cancellationToken)
+    {
+        ResendEmailVerificationCodeCommand command = new()
+        {
+            Email = request.Email
+        };
+
+        try
+        {
+            EmailVerificationCodeDispatchResultDto result = await _resendEmailVerificationCodeHandler.Handle(command, cancellationToken);
             return Ok(result);
         }
         catch (InvalidOperationException exception)

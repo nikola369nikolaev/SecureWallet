@@ -19,7 +19,7 @@ public class GetCurrentUserWalletHandler
 
         if (wallet is null)
         {
-            throw new InvalidOperationException("Wallet for the current user was not found.");
+            throw new InvalidOperationException("Портфейлът на текущия потребител не беше намерен.");
         }
 
         return new WalletSummaryDto
@@ -32,7 +32,8 @@ public class GetCurrentUserWalletHandler
             UpdatedAtUtc = wallet.UpdatedAtUtc,
             Username = wallet.User?.Username ?? string.Empty,
             Email = wallet.User?.Email ?? string.Empty,
-            Role = wallet.User?.Role?.Name ?? string.Empty
+            Role = wallet.User?.Role?.Name ?? string.Empty,
+            IsEmailVerified = wallet.User?.IsEmailVerified ?? false
         };
     }
 }

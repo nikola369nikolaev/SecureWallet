@@ -24,6 +24,8 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<ICaptchaVerificationService, TestCaptchaVerificationService>();
         services.AddScoped<ISmsVerificationService, TestSmsVerificationService>();
+        services.AddScoped<ITotpService, TotpService>();
+        services.AddScoped<IQrCodeService, QrCodeService>();
 
         return services;
     }

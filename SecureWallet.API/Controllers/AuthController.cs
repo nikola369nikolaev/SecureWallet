@@ -1,8 +1,11 @@
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SecureWallet.API.Requests.Auth;
 using SecureWallet.Application.Features.Auth.Commands.Login;
 using SecureWallet.Application.Features.Auth.Commands.Register;
 using SecureWallet.Application.Features.Auth.Commands.ResetPassword;
+using SecureWallet.Application.Features.Auth.Commands.Totp;
 using SecureWallet.Application.Features.Auth.DTOs;
 using SecureWallet.Application.Features.Auth.Exceptions;
 
@@ -17,19 +20,31 @@ public class AuthController : ControllerBase
     private readonly RequestPasswordResetCodeHandler _requestPasswordResetCodeHandler;
     private readonly VerifyPasswordResetCodeHandler _verifyPasswordResetCodeHandler;
     private readonly ResetPasswordHandler _resetPasswordHandler;
+    private readonly BeginTotpSetupHandler _beginTotpSetupHandler;
+    private readonly VerifyTotpSetupHandler _verifyTotpSetupHandler;
+    private readonly DisableTotpHandler _disableTotpHandler;
+    private readonly ResetTotpSetupHandler _resetTotpSetupHandler;
 
     public AuthController(
         RegisterUserHandler registerUserHandler,
         LoginUserHandler loginUserHandler,
         RequestPasswordResetCodeHandler requestPasswordResetCodeHandler,
         VerifyPasswordResetCodeHandler verifyPasswordResetCodeHandler,
-        ResetPasswordHandler resetPasswordHandler)
+        ResetPasswordHandler resetPasswordHandler,
+        BeginTotpSetupHandler beginTotpSetupHandler,
+        VerifyTotpSetupHandler verifyTotpSetupHandler,
+        DisableTotpHandler disableTotpHandler,
+        ResetTotpSetupHandler resetTotpSetupHandler)
     {
         _registerUserHandler = registerUserHandler;
         _loginUserHandler = loginUserHandler;
         _requestPasswordResetCodeHandler = requestPasswordResetCodeHandler;
         _verifyPasswordResetCodeHandler = verifyPasswordResetCodeHandler;
         _resetPasswordHandler = resetPasswordHandler;
+        _beginTotpSetupHandler = beginTotpSetupHandler;
+        _verifyTotpSetupHandler = verifyTotpSetupHandler;
+        _disableTotpHandler = disableTotpHandler;
+        _resetTotpSetupHandler = resetTotpSetupHandler;
     }
 
     [HttpPost("register")]
@@ -67,7 +82,8 @@ public class AuthController : ControllerBase
         {
             Email = request.Email,
             Password = request.Password,
-            CaptchaToken = request.CaptchaToken
+            CaptchaToken = request.CaptchaToken,
+            TotpCode = request.TotpCode
         };
 
         try
@@ -81,6 +97,7 @@ public class AuthController : ControllerBase
             {
                 message = exception.Message,
                 requiresCaptcha = exception.RequiresCaptcha,
+                requiresTotp = exception.RequiresTotp,
                 captchaImageBase64 = exception.CaptchaImageBase64,
                 lockoutSeconds = exception.LockoutSeconds
             });
@@ -154,11 +171,118 @@ public class AuthController : ControllerBase
         try
         {
             await _resetPasswordHandler.Handle(command, cancellationToken);
-            return Ok(new { message = "Password was reset successfully." });
+            return Ok(new { message = "Паролата беше сменена успешно." });
         }
         catch (InvalidOperationException exception)
         {
             return BadRequest(new { message = exception.Message });
         }
+    }
+
+    [Authorize]
+    [HttpGet("totp/setup")]
+    [ProducesResponseType(typeof(TotpSetupDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<TotpSetupDto>> BeginTotpSetup(CancellationToken cancellationToken)
+    {
+        try
+        {
+            Guid userId = GetCurrentUserId();
+            TotpSetupDto result = await _beginTotpSetupHandler.Handle(userId, cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+    }
+
+    [Authorize]
+    [HttpPost("totp/verify-setup")]
+    [ProducesResponseType(typeof(TotpVerificationResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<TotpVerificationResultDto>> VerifyTotpSetup(
+        [FromBody] VerifyTotpSetupRequest request,
+        CancellationToken cancellationToken)
+    {
+        VerifyTotpSetupCommand command = new()
+        {
+            UserId = GetCurrentUserId(),
+            Code = request.Code
+        };
+
+        try
+        {
+            TotpVerificationResultDto result = await _verifyTotpSetupHandler.Handle(command, cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+    }
+
+    [Authorize]
+    [HttpPost("totp/disable")]
+    [ProducesResponseType(typeof(TotpVerificationResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<TotpVerificationResultDto>> DisableTotp(
+        [FromBody] DisableTotpRequest request,
+        CancellationToken cancellationToken)
+    {
+        DisableTotpCommand command = new()
+        {
+            UserId = GetCurrentUserId(),
+            Code = request.Code
+        };
+
+        try
+        {
+            TotpVerificationResultDto result = await _disableTotpHandler.Handle(command, cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+    }
+
+    [Authorize]
+    [HttpPost("totp/reset")]
+    [ProducesResponseType(typeof(TotpSetupDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<TotpSetupDto>> ResetTotpSetup(
+        [FromBody] ResetTotpSetupRequest request,
+        CancellationToken cancellationToken)
+    {
+        ResetTotpSetupCommand command = new()
+        {
+            UserId = GetCurrentUserId(),
+            Code = request.Code
+        };
+
+        try
+        {
+            TotpSetupDto result = await _resetTotpSetupHandler.Handle(command, cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+    }
+
+    private Guid GetCurrentUserId()
+    {
+        string? userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier) ??
+                              User.FindFirstValue(ClaimTypes.Name) ??
+                              User.FindFirstValue("sub");
+
+        if (!Guid.TryParse(userIdValue, out Guid userId))
+        {
+            throw new InvalidOperationException("Текущият потребител не можа да бъде разпознат.");
+        }
+
+        return userId;
     }
 }

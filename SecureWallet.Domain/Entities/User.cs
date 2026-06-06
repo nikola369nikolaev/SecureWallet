@@ -30,9 +30,17 @@ public class User
 
     public DateTime? PasswordResetCodeExpiresAtUtc { get; set; }
 
+    public int FailedPasswordResetCodeAttempts { get; set; }
+
+    public DateTime? PasswordResetCodeLockoutEndUtc { get; set; }
+
     public string? PasswordResetSessionToken { get; set; }
 
     public DateTime? PasswordResetSessionExpiresAtUtc { get; set; }
+
+    public string? TotpSecret { get; set; }
+
+    public string? PendingTotpSecret { get; set; }
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 

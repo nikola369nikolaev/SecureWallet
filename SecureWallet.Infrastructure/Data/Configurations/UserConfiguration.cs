@@ -48,8 +48,17 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(user => user.PasswordResetCodeHash)
             .HasMaxLength(512);
 
+        builder.Property(user => user.FailedPasswordResetCodeAttempts)
+            .IsRequired();
+
         builder.Property(user => user.PasswordResetSessionToken)
             .HasMaxLength(64);
+
+        builder.Property(user => user.TotpSecret)
+            .HasMaxLength(128);
+
+        builder.Property(user => user.PendingTotpSecret)
+            .HasMaxLength(128);
 
         builder.Property(user => user.CreatedAtUtc)
             .IsRequired();

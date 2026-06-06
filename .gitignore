@@ -116,6 +116,9 @@ Thumbs.db
 # Node Modules
 node_modules/
 
+# Vite / frontend build output
+securewallet.frontend/dist/
+
 # Environment Variables
 *.env
 

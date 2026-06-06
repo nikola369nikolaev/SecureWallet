@@ -6,7 +6,7 @@ namespace SecureWallet.Infrastructure.Security;
 
 public class TestCaptchaVerificationService : ICaptchaVerificationService
 {
-    private const string CaptchaCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    private const string CaptchaCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private const int CaptchaLength = 4;
     private const int CaptchaWidth = 160;
     private const int CaptchaHeight = 60;

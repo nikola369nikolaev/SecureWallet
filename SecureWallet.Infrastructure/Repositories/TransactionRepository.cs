@@ -23,9 +23,7 @@ public class TransactionRepository : ITransactionRepository
             .FirstOrDefaultAsync(transaction => transaction.Id == transactionId, cancellationToken);
     }
 
-    public async Task<IReadOnlyCollection<Transaction>> GetByWalletIdAsync(
-        Guid walletId,
-        CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<Transaction>> GetByWalletIdAsync(Guid walletId, CancellationToken cancellationToken = default)
     {
         return await _appDbContext.Transactions
             .AsNoTracking()

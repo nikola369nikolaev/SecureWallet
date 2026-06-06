@@ -15,10 +15,13 @@ export function LoginPage() {
     email: location.state?.email ?? '',
     password: '',
     captchaToken: '',
+    totpCode: '',
   });
   const [errorMessage, setErrorMessage] = useState('');
+  const [infoMessage, setInfoMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [requiresCaptcha, setRequiresCaptcha] = useState(false);
+  const [requiresTotp, setRequiresTotp] = useState(false);
   const [captchaImageBase64, setCaptchaImageBase64] = useState(null);
   const [lockoutSeconds, setLockoutSeconds] = useState(null);
 
@@ -42,25 +45,40 @@ export function LoginPage() {
     event.preventDefault();
     setIsSubmitting(true);
     setErrorMessage('');
+    setInfoMessage('');
 
     try {
       const result = await loginUser({
         email: formState.email,
         password: formState.password,
         captchaToken: requiresCaptcha ? formState.captchaToken : null,
+        totpCode: requiresTotp ? formState.totpCode : null,
       });
 
       setSession(result);
       navigate('/dashboard', { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
-        setErrorMessage(error.payload?.message ?? error.message);
-        setRequiresCaptcha(Boolean(error.payload?.requiresCaptcha));
+        const nextRequiresTotp = Boolean(error.payload?.requiresTotp);
+        const nextRequiresCaptcha = Boolean(error.payload?.requiresCaptcha);
+        const nextMessage = error.payload?.message ?? error.message;
+        const isTotpStepPrompt = nextRequiresTotp && !formState.totpCode;
+
+        if (isTotpStepPrompt) {
+          setInfoMessage('Имейлът и паролата са приети. Въведи кода от authenticator приложението, за да завършиш входа.');
+        } else {
+          setErrorMessage(nextMessage);
+        }
+
+        setRequiresCaptcha(nextRequiresCaptcha);
+        setRequiresTotp(nextRequiresTotp);
         setCaptchaImageBase64(error.payload?.captchaImageBase64 ?? null);
         setLockoutSeconds(error.payload?.lockoutSeconds ?? null);
         setFormState((current) => ({
           ...current,
-          captchaToken: '',
+          password: isTotpStepPrompt || nextRequiresTotp ? current.password : '',
+          captchaToken: nextRequiresCaptcha ? current.captchaToken : '',
+          totpCode: nextRequiresTotp ? '' : current.totpCode,
         }));
       } else {
         setErrorMessage('Възникна неочаквана грешка при вход.');
@@ -77,7 +95,7 @@ export function LoginPage() {
         <h1>Влез в своя защитен дигитален портфейл.</h1>
         <p className="hero-copy">
           Това е първият работещ frontend екран към нашия auth backend. През него тестваш входа,
-          визуализацията на captcha защитата и поведението при временен lockout след грешни опити.
+          визуализацията на captcha защитата, TOTP двуфакторната защита и поведението при временен lockout след грешни опити.
         </p>
         <div className="hero-note-grid">
           <div className="hero-note">
@@ -85,8 +103,8 @@ export function LoginPage() {
             <span>При успешен вход token-ът се пази локално и ни държи в активна потребителска сесия.</span>
           </div>
           <div className="hero-note">
-            <strong>Captcha поток</strong>
-            <span>След поредица от грешни опити backend-ът връща base64 изображение на captcha.</span>
+            <strong>2FA и captcha</strong>
+            <span>При включена двуфакторна защита системата иска код от authenticator приложение, а при грешни опити включва captcha.</span>
           </div>
         </div>
       </section>
@@ -95,12 +113,12 @@ export function LoginPage() {
         <div className="panel-header">
           <p className="eyebrow">Вход</p>
           <h2>Влез в профила си</h2>
-          <p>Въведи регистрирания email и паролата си, за да продължиш към таблото.</p>
+          <p>Въведи регистрирания имейл и паролата си, за да продължиш към таблото.</p>
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <label className="field-group">
-            <span>Email</span>
+            <span>Имейл</span>
             <input
               type="email"
               value={formState.email}
@@ -121,6 +139,12 @@ export function LoginPage() {
             />
           </label>
 
+          {requiresTotp && (
+            <div className="message-box message-box--info">
+              <strong>Следваща стъпка:</strong> въведи 6-цифрения код от authenticator приложението.
+            </div>
+          )}
+
           {requiresCaptcha && (
             <>
               <CaptchaImage imageBase64={captchaImageBase64} />
@@ -136,6 +160,20 @@ export function LoginPage() {
             </>
           )}
 
+          {requiresTotp && (
+            <label className="field-group">
+              <span>Код от authenticator приложението</span>
+              <input
+                type="text"
+                value={formState.totpCode}
+                onChange={(event) => updateField('totpCode', event.target.value)}
+                placeholder="123456"
+                inputMode="numeric"
+              />
+            </label>
+          )}
+
+          {infoMessage && <div className="message-box message-box--info">{infoMessage}</div>}
           {errorMessage && <div className="message-box message-box--error">{errorMessage}</div>}
           {lockoutSeconds && (
             <div className="message-box message-box--warning">

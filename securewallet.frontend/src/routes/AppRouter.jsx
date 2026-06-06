@@ -5,6 +5,7 @@ import { LoginPage } from '../features/login/LoginPage';
 import { RegisterPage } from '../features/register/RegisterPage';
 import { ResetPasswordConfirmPage } from '../features/reset-password/ResetPasswordConfirmPage';
 import { ResetPasswordPage } from '../features/reset-password/ResetPasswordPage';
+import { TwoFactorSetupPage } from '../features/two-factor/TwoFactorSetupPage';
 
 function ProtectedRoute() {
   const { isAuthenticated } = useAuth();
@@ -36,6 +37,7 @@ export function AppRouter() {
 
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/security/two-factor" element={<TwoFactorSetupPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

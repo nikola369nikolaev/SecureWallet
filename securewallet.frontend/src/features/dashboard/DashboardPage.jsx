@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { getCurrentWallet } from '../../api/walletApi';
 import { ApiError } from '../../api/httpClient';
 import { useAuth } from '../../auth/AuthContext';
@@ -144,14 +144,28 @@ export function DashboardPage() {
                 <dd>{wallet?.username ?? session?.username}</dd>
               </div>
               <div>
-                <dt>Email</dt>
+                <dt>Имейл</dt>
                 <dd>{wallet?.email ?? session?.email}</dd>
               </div>
               <div>
                 <dt>Сесия до</dt>
                 <dd>{formattedSessionExpiry}</dd>
               </div>
+              <div>
+                <dt>2FA статус</dt>
+                <dd>
+                  <span className={session?.twoFactorEnabled ? 'status-pill status-pill--success' : 'status-pill status-pill--pending'}>
+                    {session?.twoFactorEnabled ? 'Включена' : 'Изключена'}
+                  </span>
+                </dd>
+              </div>
             </dl>
+
+            <div className="inline-action-row">
+              <Link className="secondary-link-button" to="/security/two-factor">
+                Настрой TOTP
+              </Link>
+            </div>
           </article>
         </div>
       </section>

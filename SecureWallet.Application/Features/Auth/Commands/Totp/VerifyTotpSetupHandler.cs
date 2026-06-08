@@ -10,16 +10,16 @@ public class VerifyTotpSetupHandler
 {
     private readonly IUserRepository _userRepository;
     private readonly ITotpService _totpService;
-    private readonly IJwtTokenService _jwtTokenService;
+    private readonly AuthSessionIssuer _authSessionIssuer;
 
     public VerifyTotpSetupHandler(
         IUserRepository userRepository,
         ITotpService totpService,
-        IJwtTokenService jwtTokenService)
+        AuthSessionIssuer authSessionIssuer)
     {
         _userRepository = userRepository;
         _totpService = totpService;
-        _jwtTokenService = jwtTokenService;
+        _authSessionIssuer = authSessionIssuer;
     }
 
     public async Task<TotpVerificationResultDto> Handle(VerifyTotpSetupCommand command, CancellationToken cancellationToken = default)
@@ -50,15 +50,16 @@ public class VerifyTotpSetupHandler
         user.UpdatedAtUtc = DateTime.UtcNow;
 
         await _userRepository.UpdateAsync(user, cancellationToken);
-
-        string accessToken = _jwtTokenService.GenerateAccessToken(user);
+        AuthSessionTokens tokens = await _authSessionIssuer.IssueAsync(user, false, cancellationToken);
 
         return new TotpVerificationResultDto
         {
             Message = "Двуфакторната защита беше включена успешно.",
             TwoFactorEnabled = true,
-            AccessToken = accessToken,
-            ExpiresAtUtc = _jwtTokenService.GetAccessTokenExpiresAtUtc(),
+            AccessToken = tokens.AccessToken,
+            ExpiresAtUtc = tokens.AccessTokenExpiresAtUtc,
+            RefreshToken = tokens.RefreshToken,
+            RefreshTokenExpiresAtUtc = tokens.RefreshTokenExpiresAtUtc,
             UserId = user.Id,
             Username = user.Username,
             Email = user.Email,

@@ -1,4 +1,4 @@
-using SecureWallet.Application.Features.Wallets.DTOs;
+﻿using SecureWallet.Application.Features.Wallets.DTOs;
 using SecureWallet.Application.Interfaces.Repositories;
 using SecureWallet.Domain.Entities;
 
@@ -28,6 +28,11 @@ public class GetCurrentUserWalletHandler
             Balance = wallet.Balance,
             Currency = wallet.Currency,
             IsActive = wallet.IsActive,
+            Iban = wallet.Iban,
+            CardNumber = wallet.CardNumber,
+            CardCvv = wallet.CardCvv,
+            CardCreatedAtUtc = wallet.CardCreatedAtUtc,
+            CardExpiresAtUtc = wallet.CardExpiresAtUtc,
             CreatedAtUtc = wallet.CreatedAtUtc,
             UpdatedAtUtc = wallet.UpdatedAtUtc,
             Username = wallet.User?.Username ?? string.Empty,

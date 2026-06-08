@@ -1,5 +1,6 @@
 ﻿using SecureWallet.Application.Features.Auth.DTOs;
 using SecureWallet.Application.Features.Auth.Validators;
+using SecureWallet.Application.Features.Wallets;
 using SecureWallet.Application.Interfaces.Repositories;
 using SecureWallet.Application.Interfaces.Security;
 using SecureWallet.Domain.Entities;
@@ -12,20 +13,17 @@ public class RegisterUserHandler
 
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
-    private readonly IWalletRepository _walletRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IEmailVerificationSender _emailVerificationSender;
 
     public RegisterUserHandler(
         IUserRepository userRepository,
         IRoleRepository roleRepository,
-        IWalletRepository walletRepository,
         IPasswordHasher passwordHasher,
         IEmailVerificationSender emailVerificationSender)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
-        _walletRepository = walletRepository;
         _passwordHasher = passwordHasher;
         _emailVerificationSender = emailVerificationSender;
     }
@@ -47,13 +45,16 @@ public class RegisterUserHandler
         AuthInputValidator.ValidatePersonName(command.LastName ?? string.Empty, "Фамилията");
 
         User? existingUserByEmail = await _userRepository.GetByEmailAsync(command.Email, cancellationToken);
-        if (existingUserByEmail is not null)
+        bool retryingPendingRegistration = existingUserByEmail is not null && !existingUserByEmail.IsEmailVerified;
+
+        if (existingUserByEmail is not null && existingUserByEmail.IsEmailVerified)
         {
             throw new InvalidOperationException("Вече съществува акаунт с този имейл.");
         }
 
         User? existingUserByUsername = await _userRepository.GetByUsernameAsync(command.Username, cancellationToken);
-        if (existingUserByUsername is not null)
+        if (existingUserByUsername is not null &&
+            (!retryingPendingRegistration || existingUserByUsername.Id != existingUserByEmail!.Id))
         {
             throw new InvalidOperationException("Вече съществува акаунт с това потребителско име.");
         }
@@ -67,7 +68,36 @@ public class RegisterUserHandler
         string emailVerificationCode = GenerateVerificationCode();
         DateTime expiresAtUtc = DateTime.UtcNow.Add(EmailVerificationCodeLifetime);
 
-        User user = new()
+        if (retryingPendingRegistration)
+        {
+            User user = existingUserByEmail!;
+            user.Username = command.Username;
+            user.Email = command.Email;
+            user.Password = _passwordHasher.Hash(command.Password);
+            user.PhoneNumber = command.PhoneNumber;
+            user.FirstName = command.FirstName;
+            user.LastName = command.LastName;
+            user.RoleId = userRole.Id;
+            user.IsEmailVerified = false;
+            user.EmailVerificationCodeHash = _passwordHasher.Hash(emailVerificationCode);
+            user.EmailVerificationCodeExpiresAtUtc = expiresAtUtc;
+            user.UpdatedAtUtc = DateTime.UtcNow;
+
+            await _emailVerificationSender.SendRegistrationVerificationCodeAsync(user.Email, emailVerificationCode, cancellationToken);
+            await _userRepository.UpdateAsync(user, cancellationToken);
+
+            return new RegisterResultDto
+            {
+                UserId = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                Message = "Имаш незавършена регистрация. Изпратихме нов код за потвърждение на имейла.",
+                RequiresEmailVerification = true,
+                SecuritySetupRequired = true
+            };
+        }
+
+        User newUser = new()
         {
             Username = command.Username,
             Email = command.Email,
@@ -76,28 +106,27 @@ public class RegisterUserHandler
             FirstName = command.FirstName,
             LastName = command.LastName,
             RoleId = userRole.Id,
-            Role = userRole,
             IsEmailVerified = false,
             EmailVerificationCodeHash = _passwordHasher.Hash(emailVerificationCode),
             EmailVerificationCodeExpiresAtUtc = expiresAtUtc
         };
 
-        await _userRepository.AddAsync(user, cancellationToken);
-
         Wallet wallet = new()
         {
-            UserId = user.Id,
+            UserId = newUser.Id,
             Balance = 0m
         };
 
-        await _walletRepository.AddAsync(wallet, cancellationToken);
-        await _emailVerificationSender.SendRegistrationVerificationCodeAsync(user.Email, emailVerificationCode, cancellationToken);
+        WalletCardGenerator.ApplyNewCardDetails(wallet);
+
+        await _emailVerificationSender.SendRegistrationVerificationCodeAsync(newUser.Email, emailVerificationCode, cancellationToken);
+        await _userRepository.AddWithWalletAsync(newUser, wallet, cancellationToken);
 
         return new RegisterResultDto
         {
-            UserId = user.Id,
-            Username = user.Username,
-            Email = user.Email,
+            UserId = newUser.Id,
+            Username = newUser.Username,
+            Email = newUser.Email,
             Message = "Изпратихме код за потвърждение на имейла. Въведи го, за да продължиш към двуфакторната защита.",
             RequiresEmailVerification = true,
             SecuritySetupRequired = true

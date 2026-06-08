@@ -101,7 +101,7 @@ export function RegisterPage() {
         replace: true,
         state: {
           email: result.email ?? formState.email,
-          message: result.message,
+          message: 'Регистрацията е успешна. Въведи кода от имейла, за да продължиш.',
         },
       });
     } catch (error) {

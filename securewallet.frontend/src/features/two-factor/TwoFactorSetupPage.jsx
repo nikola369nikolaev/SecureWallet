@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { beginTotpSetup, disableTotp, resetTotpSetup, verifyTotpSetup } from '../../api/authApi';
 import { ApiError } from '../../api/httpClient';
 import { useAuth } from '../../auth/AuthContext';
+import { createSessionFromAuthResult } from '../../auth/sessionStorage';
 
 export function TwoFactorSetupPage() {
   const navigate = useNavigate();
@@ -91,18 +92,7 @@ export function TwoFactorSetupPage() {
       setVerifyCode('');
 
       if (result.accessToken) {
-        setSession({
-          accessToken: result.accessToken,
-          expiresAtUtc: result.expiresAtUtc,
-          userId: result.userId,
-          username: result.username,
-          email: result.email,
-          role: result.role,
-          twoFactorEnabled: result.twoFactorEnabled,
-          isEmailVerified: result.isEmailVerified,
-          securitySetupRequired: result.securitySetupRequired,
-        });
-
+        setSession(createSessionFromAuthResult(result));
         navigate('/dashboard', { replace: true });
         return;
       }
@@ -248,7 +238,7 @@ export function TwoFactorSetupPage() {
                 Отвори Google Authenticator или Microsoft Authenticator и сканирай QR кода.
               </p>
               <div className="message-box message-box--info">
-                QR кодът се генерира локално от нашия backend и не изпраща setup текста към външен QR сайт.
+                QR кодът се генерира локално и не се изпраща до външен QR сайт с цел сигурност.
               </div>
               <img className="qr-image" src={setupState.qrCodeImageDataUri} alt="TOTP QR code" />
             </article>

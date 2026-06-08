@@ -111,7 +111,7 @@ export function ResetPasswordPage() {
         <div className="panel-header">
           <p className="eyebrow">Забравена парола</p>
           <h2>Потвърди акаунта си</h2>
-          <p>Въведи email и телефонен номер в +359 формат, след което поискай SMS код. Имаш максимум 3 грешни опита за кода.</p>
+          <p>Въведи имейл и телефонен номер в +359 формат, след което поискай SMS код. Имаш максимум 3 грешни опита за кода.</p>
         </div>
 
         <form className="auth-form" onSubmit={handleSendCode}>

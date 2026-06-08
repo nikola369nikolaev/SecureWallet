@@ -48,6 +48,10 @@ public class User
 
     public string? PendingTotpSecret { get; set; }
 
+    public string? RefreshTokenHash { get; set; }
+
+    public DateTime? RefreshTokenExpiresAtUtc { get; set; }
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;

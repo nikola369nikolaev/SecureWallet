@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SecureWallet.Domain.Entities;
 
@@ -23,6 +23,24 @@ public class WalletConfiguration : IEntityTypeConfiguration<Wallet>
         builder.Property(wallet => wallet.IsActive)
             .IsRequired();
 
+        builder.Property(wallet => wallet.Iban)
+            .IsRequired()
+            .HasMaxLength(22);
+
+        builder.Property(wallet => wallet.CardNumber)
+            .IsRequired()
+            .HasMaxLength(16);
+
+        builder.Property(wallet => wallet.CardCvv)
+            .IsRequired()
+            .HasMaxLength(3);
+
+        builder.Property(wallet => wallet.CardCreatedAtUtc)
+            .IsRequired();
+
+        builder.Property(wallet => wallet.CardExpiresAtUtc)
+            .IsRequired();
+
         builder.Property(wallet => wallet.CreatedAtUtc)
             .IsRequired();
 
@@ -30,6 +48,12 @@ public class WalletConfiguration : IEntityTypeConfiguration<Wallet>
             .IsRequired();
 
         builder.HasIndex(wallet => wallet.UserId)
+            .IsUnique();
+
+        builder.HasIndex(wallet => wallet.Iban)
+            .IsUnique();
+
+        builder.HasIndex(wallet => wallet.CardNumber)
             .IsUnique();
 
         builder.HasOne(wallet => wallet.User)

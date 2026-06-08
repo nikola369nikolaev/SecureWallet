@@ -10,16 +10,16 @@ public class VerifyEmailCodeHandler
 {
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
-    private readonly IJwtTokenService _jwtTokenService;
+    private readonly AuthSessionIssuer _authSessionIssuer;
 
     public VerifyEmailCodeHandler(
         IUserRepository userRepository,
         IPasswordHasher passwordHasher,
-        IJwtTokenService jwtTokenService)
+        AuthSessionIssuer authSessionIssuer)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
-        _jwtTokenService = jwtTokenService;
+        _authSessionIssuer = authSessionIssuer;
     }
 
     public async Task<EmailVerificationResultDto> Handle(VerifyEmailCodeCommand command, CancellationToken cancellationToken = default)
@@ -60,14 +60,15 @@ public class VerifyEmailCodeHandler
         user.UpdatedAtUtc = DateTime.UtcNow;
 
         await _userRepository.UpdateAsync(user, cancellationToken);
-
-        string accessToken = _jwtTokenService.GenerateAccessToken(user, true);
+        AuthSessionTokens tokens = await _authSessionIssuer.IssueAsync(user, true, cancellationToken);
 
         return new EmailVerificationResultDto
         {
             Message = "Имейлът беше потвърден успешно. Продължи с настройката на двуфакторната защита.",
-            AccessToken = accessToken,
-            ExpiresAtUtc = _jwtTokenService.GetAccessTokenExpiresAtUtc(),
+            AccessToken = tokens.AccessToken,
+            ExpiresAtUtc = tokens.AccessTokenExpiresAtUtc,
+            RefreshToken = tokens.RefreshToken,
+            RefreshTokenExpiresAtUtc = tokens.RefreshTokenExpiresAtUtc,
             UserId = user.Id,
             Username = user.Username,
             Email = user.Email,

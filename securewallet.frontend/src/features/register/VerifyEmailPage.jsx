@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { resendEmailVerificationCode, verifyEmailCode } from '../../api/authApi';
 import { ApiError } from '../../api/httpClient';
 import { useAuth } from '../../auth/AuthContext';
+import { createSessionFromAuthResult } from '../../auth/sessionStorage';
 
 const RESEND_COOLDOWN_SECONDS = 15;
 
@@ -10,7 +11,7 @@ export function VerifyEmailPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { setSession } = useAuth();
-  const [email, setEmail] = useState(location.state?.email ?? '');
+  const [email] = useState(location.state?.email ?? '');
   const [code, setCode] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [infoMessage, setInfoMessage] = useState(
@@ -22,6 +23,11 @@ export function VerifyEmailPage() {
   const [cooldownSeconds, setCooldownSeconds] = useState(location.state?.message ? RESEND_COOLDOWN_SECONDS : 0);
 
   useEffect(() => {
+    if (!location.state?.email) {
+      navigate('/register', { replace: true });
+      return;
+    }
+
     if (cooldownSeconds <= 0) {
       return undefined;
     }
@@ -31,7 +37,7 @@ export function VerifyEmailPage() {
     }, 1000);
 
     return () => window.clearInterval(intervalId);
-  }, [cooldownSeconds]);
+  }, [cooldownSeconds, location.state, navigate]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -44,18 +50,7 @@ export function VerifyEmailPage() {
         code,
       });
 
-      setSession({
-        accessToken: result.accessToken,
-        expiresAtUtc: result.expiresAtUtc,
-        userId: result.userId,
-        username: result.username,
-        email: result.email,
-        role: result.role,
-        twoFactorEnabled: result.twoFactorEnabled,
-        isEmailVerified: result.isEmailVerified,
-        securitySetupRequired: result.securitySetupRequired,
-      });
-
+      setSession(createSessionFromAuthResult(result));
       navigate('/security/two-factor', { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
@@ -94,8 +89,8 @@ export function VerifyEmailPage() {
         <p className="eyebrow">Потвърждение</p>
         <h1>Потвърди имейла си</h1>
         <p className="hero-copy">
-          Изпратихме код до въведения имейл. След успешното потвърждение ще преминеш към
-          задължителната настройка на двуфакторната защита.
+          Изпратихме код за потвърждение. След успешния код ще преминеш към настройката на
+          двуфакторната защита.
         </p>
       </section>
 
@@ -107,15 +102,9 @@ export function VerifyEmailPage() {
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
-          <label className="field-group">
-            <span>Имейл</span>
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="nikola@example.com"
-            />
-          </label>
+          <div className="message-box message-box--info">
+            Кодът е изпратен за: <strong>{email}</strong>
+          </div>
 
           <label className="field-group">
             <span>Код</span>
@@ -123,7 +112,6 @@ export function VerifyEmailPage() {
               type="text"
               value={code}
               onChange={(event) => setCode(event.target.value)}
-              placeholder="123456"
               inputMode="numeric"
             />
           </label>

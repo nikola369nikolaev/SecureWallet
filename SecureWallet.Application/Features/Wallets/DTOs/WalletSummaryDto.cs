@@ -1,4 +1,4 @@
-namespace SecureWallet.Application.Features.Wallets.DTOs;
+﻿namespace SecureWallet.Application.Features.Wallets.DTOs;
 
 public class WalletSummaryDto
 {
@@ -9,6 +9,16 @@ public class WalletSummaryDto
     public string Currency { get; set; } = string.Empty;
 
     public bool IsActive { get; set; }
+
+    public string Iban { get; set; } = string.Empty;
+
+    public string CardNumber { get; set; } = string.Empty;
+
+    public string CardCvv { get; set; } = string.Empty;
+
+    public DateTime CardCreatedAtUtc { get; set; }
+
+    public DateTime CardExpiresAtUtc { get; set; }
 
     public DateTime CreatedAtUtc { get; set; }
 

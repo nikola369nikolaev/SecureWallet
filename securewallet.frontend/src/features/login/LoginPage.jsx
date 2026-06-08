@@ -1,11 +1,12 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { loginUser } from '../../api/authApi';
+import { loginUser, resendEmailVerificationCode, verifyEmailCode } from '../../api/authApi';
 import { ApiError } from '../../api/httpClient';
 import { useAuth } from '../../auth/AuthContext';
 import { CaptchaImage } from '../../components/CaptchaImage';
 
 const SESSION_EXPIRED_KEY = 'securewallet.auth.sessionExpired';
+const RESEND_COOLDOWN_SECONDS = 15;
 
 export function LoginPage() {
   const location = useLocation();
@@ -16,14 +17,18 @@ export function LoginPage() {
     password: '',
     captchaToken: '',
     totpCode: '',
+    verificationCode: '',
   });
   const [errorMessage, setErrorMessage] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [requiresCaptcha, setRequiresCaptcha] = useState(false);
   const [requiresTotp, setRequiresTotp] = useState(false);
+  const [requiresEmailVerification, setRequiresEmailVerification] = useState(false);
   const [captchaImageBase64, setCaptchaImageBase64] = useState(null);
   const [lockoutSeconds, setLockoutSeconds] = useState(null);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
 
   useEffect(() => {
     const hasExpiredSessionFlag = window.sessionStorage.getItem(SESSION_EXPIRED_KEY) === 'true';
@@ -33,6 +38,18 @@ export function LoginPage() {
       window.sessionStorage.removeItem(SESSION_EXPIRED_KEY);
     }
   }, [location.state]);
+
+  useEffect(() => {
+    if (cooldownSeconds <= 0) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setCooldownSeconds((current) => (current > 0 ? current - 1 : 0));
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [cooldownSeconds]);
 
   function updateField(field, value) {
     setFormState((current) => ({
@@ -45,9 +62,23 @@ export function LoginPage() {
     event.preventDefault();
     setIsSubmitting(true);
     setErrorMessage('');
-    setInfoMessage('');
+
+    if (!requiresEmailVerification) {
+      setInfoMessage('');
+    }
 
     try {
+      if (requiresEmailVerification) {
+        const result = await verifyEmailCode({
+          email: formState.email,
+          code: formState.verificationCode,
+        });
+
+        setSession(result);
+        navigate('/security/two-factor', { replace: true });
+        return;
+      }
+
       const result = await loginUser({
         email: formState.email,
         password: formState.password,
@@ -61,30 +92,63 @@ export function LoginPage() {
       if (error instanceof ApiError) {
         const nextRequiresTotp = Boolean(error.payload?.requiresTotp);
         const nextRequiresCaptcha = Boolean(error.payload?.requiresCaptcha);
+        const nextRequiresEmailVerification = Boolean(error.payload?.requiresEmailVerification);
         const nextMessage = error.payload?.message ?? error.message;
         const isTotpStepPrompt = nextRequiresTotp && !formState.totpCode;
 
-        if (isTotpStepPrompt) {
+        if (nextRequiresEmailVerification) {
+          setInfoMessage('Имейлът и паролата са приети. Въведи 6-цифрения код от имейла, за да потвърдиш акаунта.');
+        } else if (isTotpStepPrompt) {
           setInfoMessage('Имейлът и паролата са приети. Въведи кода от authenticator приложението, за да завършиш входа.');
         } else {
           setErrorMessage(nextMessage);
         }
 
-        setRequiresCaptcha(nextRequiresCaptcha);
-        setRequiresTotp(nextRequiresTotp);
-        setCaptchaImageBase64(error.payload?.captchaImageBase64 ?? null);
-        setLockoutSeconds(error.payload?.lockoutSeconds ?? null);
+        setRequiresEmailVerification(nextRequiresEmailVerification);
+        setRequiresCaptcha(nextRequiresEmailVerification ? false : nextRequiresCaptcha);
+        setRequiresTotp(nextRequiresEmailVerification ? false : nextRequiresTotp);
+        setCaptchaImageBase64(nextRequiresEmailVerification ? null : (error.payload?.captchaImageBase64 ?? null));
+        setLockoutSeconds(nextRequiresEmailVerification ? null : (error.payload?.lockoutSeconds ?? null));
         setFormState((current) => ({
           ...current,
-          password: isTotpStepPrompt || nextRequiresTotp ? current.password : '',
+          email: error.payload?.email ?? current.email,
+          password: nextRequiresEmailVerification || isTotpStepPrompt || nextRequiresTotp ? current.password : '',
           captchaToken: '',
           totpCode: nextRequiresTotp ? '' : current.totpCode,
+          verificationCode: nextRequiresEmailVerification ? '' : current.verificationCode,
         }));
       } else {
-        setErrorMessage('Възникна неочаквана грешка при вход.');
+        setErrorMessage(
+          requiresEmailVerification
+            ? 'Възникна неочаквана грешка при потвърждаване на имейла.'
+            : 'Възникна неочаквана грешка при вход.',
+        );
       }
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleResendVerificationCode() {
+    setErrorMessage('');
+    setIsResending(true);
+
+    try {
+      const result = await resendEmailVerificationCode({ email: formState.email });
+      setInfoMessage(`${result.message} Кодът е валиден до ${new Date(result.expiresAtUtc).toLocaleString('bg-BG')}.`);
+      setCooldownSeconds(RESEND_COOLDOWN_SECONDS);
+      setFormState((current) => ({
+        ...current,
+        verificationCode: '',
+      }));
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setErrorMessage(error.payload?.message ?? error.message);
+      } else {
+        setErrorMessage('Възникна неочаквана грешка при изпращане на нов код.');
+      }
+    } finally {
+      setIsResending(false);
     }
   }
 
@@ -125,6 +189,7 @@ export function LoginPage() {
               onChange={(event) => updateField('email', event.target.value)}
               placeholder="nikola@example.com"
               autoComplete="email"
+              disabled={requiresEmailVerification}
             />
           </label>
 
@@ -136,8 +201,15 @@ export function LoginPage() {
               onChange={(event) => updateField('password', event.target.value)}
               placeholder="Въведи паролата"
               autoComplete="current-password"
+              disabled={requiresEmailVerification}
             />
           </label>
+
+          {requiresEmailVerification && (
+            <div className="message-box message-box--info">
+              <strong>Следваща стъпка:</strong> въведи 6-цифрения код, който изпратихме на имейла, и провери папка Spam, ако не го виждаш.
+            </div>
+          )}
 
           {requiresTotp && (
             <div className="message-box message-box--info">
@@ -157,6 +229,34 @@ export function LoginPage() {
                   placeholder="Въведи символите от картинката"
                 />
               </label>
+            </>
+          )}
+
+          {requiresEmailVerification && (
+            <>
+              <label className="field-group">
+                <span>Код от имейла</span>
+                <input
+                  type="text"
+                  value={formState.verificationCode}
+                  onChange={(event) => updateField('verificationCode', event.target.value)}
+                  inputMode="numeric"
+                />
+              </label>
+
+              <div className="inline-action-row">
+                <button className="secondary-button" type="button" onClick={handleResendVerificationCode} disabled={isResending || cooldownSeconds > 0}>
+                  {isResending
+                    ? 'Изпращане...'
+                    : cooldownSeconds > 0
+                      ? `Нов код след ${cooldownSeconds} сек.`
+                      : 'Изпрати нов код'}
+                </button>
+              </div>
+
+              {cooldownSeconds > 0 && (
+                <p className="field-hint">Можеш да поискаш нов код след {cooldownSeconds} секунди.</p>
+              )}
             </>
           )}
 
@@ -182,7 +282,7 @@ export function LoginPage() {
           )}
 
           <button className="primary-button" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Изпращане...' : 'Вход'}
+            {isSubmitting ? 'Изпращане...' : requiresEmailVerification ? 'Потвърди имейла' : 'Вход'}
           </button>
         </form>
 
@@ -192,10 +292,6 @@ export function LoginPage() {
           </span>
           <Link to="/reset-password">Забравена парола</Link>
         </div>
-
-        <p className="panel-footer">
-          Имаш код за потвърждение? <Link to="/register/verify-email">Въведи го оттук</Link>
-        </p>
       </section>
     </main>
   );

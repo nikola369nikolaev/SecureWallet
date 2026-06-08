@@ -15,20 +15,20 @@ public class LoginUserHandler
 
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
-    private readonly IJwtTokenService _jwtTokenService;
+    private readonly AuthSessionIssuer _authSessionIssuer;
     private readonly ICaptchaVerificationService _captchaVerificationService;
     private readonly ITotpService _totpService;
 
     public LoginUserHandler(
         IUserRepository userRepository,
         IPasswordHasher passwordHasher,
-        IJwtTokenService jwtTokenService,
+        AuthSessionIssuer authSessionIssuer,
         ICaptchaVerificationService captchaVerificationService,
         ITotpService totpService)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
-        _jwtTokenService = jwtTokenService;
+        _authSessionIssuer = authSessionIssuer;
         _captchaVerificationService = captchaVerificationService;
         _totpService = totpService;
     }
@@ -43,11 +43,6 @@ public class LoginUserHandler
         if (user is null)
         {
             throw new InvalidOperationException("Грешен имейл или парола.");
-        }
-
-        if (!user.IsEmailVerified)
-        {
-            throw new InvalidOperationException("Имейлът на този акаунт още не е потвърден. Завърши имейл верификацията и после настрой двуфакторната защита.");
         }
 
         if (user.LockoutEndUtc.HasValue && user.LockoutEndUtc.Value > now)
@@ -117,10 +112,20 @@ public class LoginUserHandler
             throw invalidPasswordException;
         }
 
+        if (!user.IsEmailVerified)
+        {
+            await ClearLoginProtectionStateAsync(user, now, cancellationToken);
+
+            throw new LoginProtectionException(
+                "Имейлът още не е потвърден. Въведи кода от имейла, за да продължиш.",
+                requiresEmailVerification: true,
+                email: user.Email);
+        }
+
         if (!user.TwoFactorEnabled)
         {
             await ClearLoginProtectionStateAsync(user, now, cancellationToken);
-            return CreateSessionResult(user, true);
+            return await CreateSessionResultAsync(user, true, cancellationToken);
         }
 
         if (string.IsNullOrWhiteSpace(command.TotpCode))
@@ -149,17 +154,22 @@ public class LoginUserHandler
         }
 
         await ClearLoginProtectionStateAsync(user, now, cancellationToken);
-        return CreateSessionResult(user, false);
+        return await CreateSessionResultAsync(user, false, cancellationToken);
     }
 
-    private LoginResultDto CreateSessionResult(User user, bool securitySetupRequired)
+    private async Task<LoginResultDto> CreateSessionResultAsync(
+        User user,
+        bool securitySetupRequired,
+        CancellationToken cancellationToken)
     {
-        string accessToken = _jwtTokenService.GenerateAccessToken(user, securitySetupRequired);
+        AuthSessionTokens tokens = await _authSessionIssuer.IssueAsync(user, securitySetupRequired, cancellationToken);
 
         return new LoginResultDto
         {
-            AccessToken = accessToken,
-            ExpiresAtUtc = _jwtTokenService.GetAccessTokenExpiresAtUtc(),
+            AccessToken = tokens.AccessToken,
+            ExpiresAtUtc = tokens.AccessTokenExpiresAtUtc,
+            RefreshToken = tokens.RefreshToken,
+            RefreshTokenExpiresAtUtc = tokens.RefreshTokenExpiresAtUtc,
             UserId = user.Id,
             Username = user.Username,
             Email = user.Email,

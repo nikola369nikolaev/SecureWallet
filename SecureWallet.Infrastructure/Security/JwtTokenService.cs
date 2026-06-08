@@ -1,5 +1,6 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -11,6 +12,7 @@ namespace SecureWallet.Infrastructure.Security;
 
 public class JwtTokenService : IJwtTokenService
 {
+    private const int DefaultRefreshTokenExpirationDays = 7;
     private readonly IConfiguration _configuration;
 
     public JwtTokenService(IConfiguration configuration)
@@ -66,6 +68,16 @@ public class JwtTokenService : IJwtTokenService
         return DateTime.UtcNow.AddMinutes(GetAccessTokenExpirationMinutes());
     }
 
+    public string GenerateRefreshToken()
+    {
+        return Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+    }
+
+    public DateTime GetRefreshTokenExpiresAtUtc()
+    {
+        return DateTime.UtcNow.AddDays(GetRefreshTokenExpirationDays());
+    }
+
     private int GetAccessTokenExpirationMinutes()
     {
         string expirationMinutesValue = _configuration["Jwt:AccessTokenExpirationMinutes"]
@@ -77,5 +89,21 @@ public class JwtTokenService : IJwtTokenService
         }
 
         return expirationMinutes;
+    }
+
+    private int GetRefreshTokenExpirationDays()
+    {
+        string? expirationDaysValue = _configuration["Jwt:RefreshTokenExpirationDays"];
+        if (string.IsNullOrWhiteSpace(expirationDaysValue))
+        {
+            return DefaultRefreshTokenExpirationDays;
+        }
+
+        if (!int.TryParse(expirationDaysValue, out int expirationDays))
+        {
+            throw new InvalidOperationException("JWT refresh token expiration is invalid.");
+        }
+
+        return expirationDays;
     }
 }

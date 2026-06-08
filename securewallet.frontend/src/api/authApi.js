@@ -8,6 +8,10 @@ export function loginUser(payload) {
   return postJson('/api/Auth/login', payload);
 }
 
+export function refreshSession(payload) {
+  return postJson('/api/Auth/refresh', payload);
+}
+
 export function verifyEmailCode(payload) {
   return postJson('/api/Auth/verify-email', payload);
 }

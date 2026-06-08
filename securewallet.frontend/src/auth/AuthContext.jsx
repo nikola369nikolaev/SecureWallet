@@ -1,60 +1,35 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+﻿import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  clearSessionExpiredFlag,
+  clearStoredSession,
+  isRefreshTokenExpired,
+  loadStoredSession,
+  markSessionExpired,
+  saveStoredSession,
+} from './sessionStorage';
 
-const STORAGE_KEY = 'securewallet.auth.session';
-const SESSION_EXPIRED_KEY = 'securewallet.auth.sessionExpired';
 const AuthContext = createContext(null);
-
-function markSessionExpired() {
-  window.sessionStorage.setItem(SESSION_EXPIRED_KEY, 'true');
-}
-
-function loadStoredSession() {
-  try {
-    const rawValue = window.localStorage.getItem(STORAGE_KEY);
-    if (!rawValue) {
-      return null;
-    }
-
-    const parsedValue = JSON.parse(rawValue);
-
-    if (isSessionExpired(parsedValue)) {
-      markSessionExpired();
-      window.localStorage.removeItem(STORAGE_KEY);
-      return null;
-    }
-
-    return parsedValue;
-  } catch {
-    return null;
-  }
-}
-
-function isSessionExpired(session) {
-  if (!session?.expiresAtUtc) {
-    return true;
-  }
-
-  const expiresAt = new Date(session.expiresAtUtc);
-
-  if (Number.isNaN(expiresAt.getTime())) {
-    return true;
-  }
-
-  return expiresAt.getTime() <= Date.now();
-}
 
 export function AuthProvider({ children }) {
   const [session, setSessionState] = useState(() => loadStoredSession());
 
   function setSession(nextSession) {
+    if (!nextSession) {
+      setSessionState(null);
+      clearStoredSession();
+      clearSessionExpiredFlag();
+      return;
+    }
+
     setSessionState(nextSession);
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
-    window.sessionStorage.removeItem(SESSION_EXPIRED_KEY);
+    saveStoredSession(nextSession);
+    clearSessionExpiredFlag();
   }
 
   function logout() {
     setSessionState(null);
-    window.localStorage.removeItem(STORAGE_KEY);
+    clearStoredSession();
+    clearSessionExpiredFlag();
   }
 
   useEffect(() => {
@@ -62,17 +37,19 @@ export function AuthProvider({ children }) {
       return undefined;
     }
 
-    if (isSessionExpired(session)) {
+    if (isRefreshTokenExpired(session)) {
       markSessionExpired();
-      logout();
+      setSessionState(null);
+      clearStoredSession();
       return undefined;
     }
 
-    const millisecondsUntilExpiry = new Date(session.expiresAtUtc).getTime() - Date.now();
+    const millisecondsUntilRefreshExpiry = new Date(session.refreshTokenExpiresAtUtc).getTime() - Date.now();
     const timeoutId = window.setTimeout(() => {
       markSessionExpired();
-      logout();
-    }, millisecondsUntilExpiry);
+      setSessionState(null);
+      clearStoredSession();
+    }, millisecondsUntilRefreshExpiry);
 
     return () => window.clearTimeout(timeoutId);
   }, [session]);
@@ -80,7 +57,7 @@ export function AuthProvider({ children }) {
   const contextValue = useMemo(
     () => ({
       session,
-      isAuthenticated: Boolean(session?.accessToken),
+      isAuthenticated: Boolean(session?.accessToken && !isRefreshTokenExpired(session)),
       setSession,
       logout,
     }),

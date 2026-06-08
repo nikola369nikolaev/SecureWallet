@@ -7,4 +7,8 @@ public interface IJwtTokenService
     string GenerateAccessToken(User user, bool securitySetupRequired = false);
 
     DateTime GetAccessTokenExpiresAtUtc();
+
+    string GenerateRefreshToken();
+
+    DateTime GetRefreshTokenExpiresAtUtc();
 }

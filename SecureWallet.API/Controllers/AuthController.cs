@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SecureWallet.API.Requests.Auth;
 using SecureWallet.Application.Features.Auth.Commands.Login;
+using SecureWallet.Application.Features.Auth.Commands.Refresh;
 using SecureWallet.Application.Features.Auth.Commands.Register;
 using SecureWallet.Application.Features.Auth.Commands.ResetPassword;
 using SecureWallet.Application.Features.Auth.Commands.Totp;
@@ -20,6 +21,7 @@ public class AuthController : ControllerBase
     private readonly VerifyEmailCodeHandler _verifyEmailCodeHandler;
     private readonly ResendEmailVerificationCodeHandler _resendEmailVerificationCodeHandler;
     private readonly LoginUserHandler _loginUserHandler;
+    private readonly RefreshSessionHandler _refreshSessionHandler;
     private readonly RequestPasswordResetCodeHandler _requestPasswordResetCodeHandler;
     private readonly VerifyPasswordResetCodeHandler _verifyPasswordResetCodeHandler;
     private readonly ResetPasswordHandler _resetPasswordHandler;
@@ -33,6 +35,7 @@ public class AuthController : ControllerBase
         VerifyEmailCodeHandler verifyEmailCodeHandler,
         ResendEmailVerificationCodeHandler resendEmailVerificationCodeHandler,
         LoginUserHandler loginUserHandler,
+        RefreshSessionHandler refreshSessionHandler,
         RequestPasswordResetCodeHandler requestPasswordResetCodeHandler,
         VerifyPasswordResetCodeHandler verifyPasswordResetCodeHandler,
         ResetPasswordHandler resetPasswordHandler,
@@ -45,6 +48,7 @@ public class AuthController : ControllerBase
         _verifyEmailCodeHandler = verifyEmailCodeHandler;
         _resendEmailVerificationCodeHandler = resendEmailVerificationCodeHandler;
         _loginUserHandler = loginUserHandler;
+        _refreshSessionHandler = refreshSessionHandler;
         _requestPasswordResetCodeHandler = requestPasswordResetCodeHandler;
         _verifyPasswordResetCodeHandler = verifyPasswordResetCodeHandler;
         _resetPasswordHandler = resetPasswordHandler;
@@ -152,9 +156,35 @@ public class AuthController : ControllerBase
                 message = exception.Message,
                 requiresCaptcha = exception.RequiresCaptcha,
                 requiresTotp = exception.RequiresTotp,
+                requiresEmailVerification = exception.RequiresEmailVerification,
+                email = exception.Email,
                 captchaImageBase64 = exception.CaptchaImageBase64,
                 lockoutSeconds = exception.LockoutSeconds
             });
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+    }
+
+    [HttpPost("refresh")]
+    [ProducesResponseType(typeof(RefreshSessionResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<RefreshSessionResultDto>> RefreshSession(
+        [FromBody] RefreshSessionRequest request,
+        CancellationToken cancellationToken)
+    {
+        RefreshSessionCommand command = new()
+        {
+            UserId = request.UserId,
+            RefreshToken = request.RefreshToken
+        };
+
+        try
+        {
+            RefreshSessionResultDto result = await _refreshSessionHandler.Handle(command, cancellationToken);
+            return Ok(result);
         }
         catch (InvalidOperationException exception)
         {

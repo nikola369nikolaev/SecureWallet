@@ -41,6 +41,7 @@ builder.Services.AddSwaggerGen();
 WebApplication app = builder.Build();
 
 await RoleSeeder.SeedDefaultRolesAsync(app.Services);
+await AdminAccountSeeder.SeedAdminAccountAsync(app.Services);
 
 if (app.Environment.IsDevelopment())
 {

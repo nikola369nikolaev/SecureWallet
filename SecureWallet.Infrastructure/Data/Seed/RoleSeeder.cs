@@ -11,22 +11,29 @@ public static class RoleSeeder
         using IServiceScope scope = serviceProvider.CreateScope();
         AppDbContext appDbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        bool hasUserRole = await appDbContext.Roles
-            .AsNoTracking()
-            .AnyAsync(role => role.Name == "User");
+        await EnsureRoleAsync(appDbContext, "User", "Default role for registered users.");
+        await EnsureRoleAsync(appDbContext, "Admin", "Administrative role with management permissions.");
+        await EnsureRoleAsync(appDbContext, "Support", "Read-only support role for user and transaction review.");
+    }
 
-        if (hasUserRole)
+    private static async Task EnsureRoleAsync(AppDbContext appDbContext, string roleName, string description)
+    {
+        bool hasRole = await appDbContext.Roles
+            .AsNoTracking()
+            .AnyAsync(role => role.Name == roleName);
+
+        if (hasRole)
         {
             return;
         }
 
-        Role userRole = new()
+        Role role = new()
         {
-            Name = "User",
-            Description = "Default role for registered users."
+            Name = roleName,
+            Description = description
         };
 
-        await appDbContext.Roles.AddAsync(userRole);
+        await appDbContext.Roles.AddAsync(role);
         await appDbContext.SaveChangesAsync();
     }
 }

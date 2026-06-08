@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SecureWallet.Application.Interfaces.Repositories;
 using SecureWallet.Domain.Entities;
 using SecureWallet.Infrastructure.Data;
@@ -30,6 +30,17 @@ public class WalletRepository : IWalletRepository
             .Include(wallet => wallet.User)
             .ThenInclude(user => user!.Role)
             .FirstOrDefaultAsync(wallet => wallet.UserId == userId, cancellationToken);
+    }
+
+    public async Task<Wallet?> GetByIbanAsync(string iban, CancellationToken cancellationToken = default)
+    {
+        string normalizedIban = iban.Replace(" ", string.Empty).ToUpperInvariant();
+
+        return await _appDbContext.Wallets
+            .AsNoTracking()
+            .Include(wallet => wallet.User)
+            .ThenInclude(user => user!.Role)
+            .FirstOrDefaultAsync(wallet => wallet.Iban.ToUpper() == normalizedIban, cancellationToken);
     }
 
     public async Task AddAsync(Wallet wallet, CancellationToken cancellationToken = default)

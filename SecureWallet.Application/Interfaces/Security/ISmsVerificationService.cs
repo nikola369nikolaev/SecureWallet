@@ -8,6 +8,4 @@ public interface ISmsVerificationService
 public class SmsVerificationDispatchResult
 {
     public string Message { get; set; } = string.Empty;
-
-    public string? DevelopmentCodePreview { get; set; }
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { requestPasswordResetCode, verifyPasswordResetCode } from '../../api/authApi';
 import { ApiError } from '../../api/httpClient';
@@ -14,7 +14,6 @@ export function ResetPasswordPage() {
   });
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [developmentCodePreview, setDevelopmentCodePreview] = useState('');
   const [canEnterCode, setCanEnterCode] = useState(false);
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
@@ -30,7 +29,6 @@ export function ResetPasswordPage() {
     event.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
-    setDevelopmentCodePreview('');
     setIsSendingCode(true);
 
     try {
@@ -40,7 +38,6 @@ export function ResetPasswordPage() {
       });
 
       setCanEnterCode(Boolean(result.canEnterCode));
-      setDevelopmentCodePreview(result.developmentCodePreview ?? '');
       setSuccessMessage(result.message ?? 'SMS кодът беше изпратен успешно.');
     } catch (error) {
       if (error instanceof ApiError) {
@@ -144,7 +141,15 @@ export function ResetPasswordPage() {
 
         <form className="auth-form" onSubmit={handleVerifyCode}>
           <label className="field-group">
-            <span>Код от SMS</span>
+            <span className="inline-label-with-info">
+              <span>Код от SMS</span>
+              <span className="info-tooltip-badge" tabIndex={0} aria-label="Подсказка за кода">
+                i
+                <span className="info-tooltip-content">
+                  Тук въведи еднократния код, който получи по SMS. Това не е код от authenticator приложението.
+                </span>
+              </span>
+            </span>
             <input
               type="text"
               value={formState.code}
@@ -153,12 +158,6 @@ export function ResetPasswordPage() {
               disabled={!canEnterCode}
             />
           </label>
-
-          {developmentCodePreview && (
-            <div className="message-box message-box--info">
-              Тестов SMS код за момента: <strong>{developmentCodePreview}</strong>
-            </div>
-          )}
 
           {errorMessage && <div className="message-box message-box--error">{errorMessage}</div>}
           {successMessage && <div className="message-box message-box--success">{successMessage}</div>}

@@ -1,4 +1,5 @@
-﻿using SecureWallet.Application.Features.Auth.Validators;
+﻿using SecureWallet.Application.Features.Auth.DTOs;
+using SecureWallet.Application.Features.Auth.Validators;
 using SecureWallet.Application.Interfaces.Repositories;
 using SecureWallet.Application.Interfaces.Security;
 using SecureWallet.Domain.Entities;
@@ -9,14 +10,19 @@ public class ResetPasswordHandler
 {
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly AuthSessionIssuer _authSessionIssuer;
 
-    public ResetPasswordHandler(IUserRepository userRepository, IPasswordHasher passwordHasher)
+    public ResetPasswordHandler(
+        IUserRepository userRepository,
+        IPasswordHasher passwordHasher,
+        AuthSessionIssuer authSessionIssuer)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
+        _authSessionIssuer = authSessionIssuer;
     }
 
-    public async Task Handle(ResetPasswordCommand command, CancellationToken cancellationToken = default)
+    public async Task<PasswordResetCompletionResultDto> Handle(ResetPasswordCommand command, CancellationToken cancellationToken = default)
     {
         AuthInputValidator.ValidateRequiredField(command.ResetSessionToken, "Токенът за смяна на паролата");
         AuthInputValidator.ValidateNoLeadingOrTrailingWhitespace(command.ResetSessionToken, "Токенът за смяна на паролата");
@@ -48,8 +54,28 @@ public class ResetPasswordHandler
         user.PasswordResetCodeExpiresAtUtc = null;
         user.PasswordResetSessionToken = null;
         user.PasswordResetSessionExpiresAtUtc = null;
+        user.TwoFactorEnabled = false;
+        user.TotpSecret = null;
+        user.PendingTotpSecret = null;
         user.UpdatedAtUtc = DateTime.UtcNow;
 
         await _userRepository.UpdateAsync(user, cancellationToken);
+        AuthSessionTokens tokens = await _authSessionIssuer.IssueAsync(user, true, cancellationToken);
+
+        return new PasswordResetCompletionResultDto
+        {
+            Message = "Паролата беше сменена успешно. Продължи с новата TOTP настройка.",
+            AccessToken = tokens.AccessToken,
+            ExpiresAtUtc = tokens.AccessTokenExpiresAtUtc,
+            RefreshToken = tokens.RefreshToken,
+            RefreshTokenExpiresAtUtc = tokens.RefreshTokenExpiresAtUtc,
+            UserId = user.Id,
+            Username = user.Username,
+            Email = user.Email,
+            Role = user.Role?.Name ?? string.Empty,
+            TwoFactorEnabled = false,
+            IsEmailVerified = user.IsEmailVerified,
+            SecuritySetupRequired = true
+        };
     }
 }

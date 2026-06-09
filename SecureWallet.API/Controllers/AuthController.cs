@@ -17,6 +17,7 @@ namespace SecureWallet.API.Controllers;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
+    private readonly ILogger<AuthController> _logger;
     private readonly RegisterUserHandler _registerUserHandler;
     private readonly VerifyEmailCodeHandler _verifyEmailCodeHandler;
     private readonly ResendEmailVerificationCodeHandler _resendEmailVerificationCodeHandler;
@@ -31,6 +32,7 @@ public class AuthController : ControllerBase
     private readonly ResetTotpSetupHandler _resetTotpSetupHandler;
 
     public AuthController(
+        ILogger<AuthController> logger,
         RegisterUserHandler registerUserHandler,
         VerifyEmailCodeHandler verifyEmailCodeHandler,
         ResendEmailVerificationCodeHandler resendEmailVerificationCodeHandler,
@@ -44,6 +46,7 @@ public class AuthController : ControllerBase
         DisableTotpHandler disableTotpHandler,
         ResetTotpSetupHandler resetTotpSetupHandler)
     {
+        _logger = logger;
         _registerUserHandler = registerUserHandler;
         _verifyEmailCodeHandler = verifyEmailCodeHandler;
         _resendEmailVerificationCodeHandler = resendEmailVerificationCodeHandler;
@@ -76,10 +79,12 @@ public class AuthController : ControllerBase
         try
         {
             RegisterResultDto result = await _registerUserHandler.Handle(command, cancellationToken);
+            _logger.LogInformation("Регистрация: създаден е акаунт {Username} с имейл {Email}.", result.Username, result.Email);
             return Ok(result);
         }
         catch (InvalidOperationException exception)
         {
+            _logger.LogWarning("Регистрация отказана за имейл {Email}: {Reason}", request.Email, exception.Message);
             return BadRequest(new { message = exception.Message });
         }
     }
@@ -100,10 +105,12 @@ public class AuthController : ControllerBase
         try
         {
             EmailVerificationResultDto result = await _verifyEmailCodeHandler.Handle(command, cancellationToken);
+            _logger.LogInformation("Имейл потвърждение: акаунтът с имейл {Email} беше потвърден.", result.Email);
             return Ok(result);
         }
         catch (InvalidOperationException exception)
         {
+            _logger.LogWarning("Имейл потвърждение отказано за имейл {Email}: {Reason}", request.Email, exception.Message);
             return BadRequest(new { message = exception.Message });
         }
     }
@@ -123,10 +130,12 @@ public class AuthController : ControllerBase
         try
         {
             EmailVerificationCodeDispatchResultDto result = await _resendEmailVerificationCodeHandler.Handle(command, cancellationToken);
+            _logger.LogInformation("Имейл потвърждение: изпратен е нов код към {Email}.", request.Email);
             return Ok(result);
         }
         catch (InvalidOperationException exception)
         {
+            _logger.LogWarning("Повторно изпращане на имейл код отказано за {Email}: {Reason}", request.Email, exception.Message);
             return BadRequest(new { message = exception.Message });
         }
     }
@@ -147,10 +156,21 @@ public class AuthController : ControllerBase
         try
         {
             LoginResultDto result = await _loginUserHandler.Handle(command, cancellationToken);
+            _logger.LogInformation("Вход: потребител {Username} с имейл {Email} влезе успешно.", result.Username, result.Email);
             return Ok(result);
         }
         catch (LoginProtectionException exception)
         {
+            _logger.LogWarning(
+                "Вход: защитна проверка за имейл {Email}. Stage={FailureStage}, Attempts={FailedAttemptCount}, Captcha={RequiresCaptcha}, Totp={RequiresTotp}, EmailVerification={RequiresEmailVerification}, LockoutSeconds={LockoutSeconds}, Причина={Reason}",
+                request.Email,
+                exception.FailureStage,
+                exception.FailedAttemptCount,
+                exception.RequiresCaptcha,
+                exception.RequiresTotp,
+                exception.RequiresEmailVerification,
+                exception.LockoutSeconds,
+                exception.Message);
             return BadRequest(new
             {
                 message = exception.Message,
@@ -164,6 +184,7 @@ public class AuthController : ControllerBase
         }
         catch (InvalidOperationException exception)
         {
+            _logger.LogWarning("Вход отказан за имейл {Email}: {Reason}", request.Email, exception.Message);
             return BadRequest(new { message = exception.Message });
         }
     }
@@ -184,10 +205,12 @@ public class AuthController : ControllerBase
         try
         {
             RefreshSessionResultDto result = await _refreshSessionHandler.Handle(command, cancellationToken);
+            _logger.LogInformation("Сесия: достъпът беше подновен за потребител {UserId}.", request.UserId);
             return Ok(result);
         }
         catch (InvalidOperationException exception)
         {
+            _logger.LogWarning("Сесия: неуспешно подновяване за потребител {UserId}: {Reason}", request.UserId, exception.Message);
             return BadRequest(new { message = exception.Message });
         }
     }
@@ -208,10 +231,12 @@ public class AuthController : ControllerBase
         try
         {
             PasswordResetCodeDispatchResultDto result = await _requestPasswordResetCodeHandler.Handle(command, cancellationToken);
+            _logger.LogInformation("Смяна на парола: изпратен е SMS код за имейл {Email}.", request.Email);
             return Ok(result);
         }
         catch (InvalidOperationException exception)
         {
+            _logger.LogWarning("Смяна на парола: отказано изпращане на SMS код за имейл {Email}: {Reason}", request.Email, exception.Message);
             return BadRequest(new { message = exception.Message });
         }
     }
@@ -233,18 +258,20 @@ public class AuthController : ControllerBase
         try
         {
             PasswordResetCodeVerificationResultDto result = await _verifyPasswordResetCodeHandler.Handle(command, cancellationToken);
+            _logger.LogInformation("Смяна на парола: SMS кодът е потвърден за имейл {Email}.", request.Email);
             return Ok(result);
         }
         catch (InvalidOperationException exception)
         {
+            _logger.LogWarning("Смяна на парола: невалиден SMS код за имейл {Email}: {Reason}", request.Email, exception.Message);
             return BadRequest(new { message = exception.Message });
         }
     }
 
     [HttpPost("reset-password/complete")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PasswordResetCompletionResultDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<object>> ResetPassword([FromBody] ResetPasswordRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<PasswordResetCompletionResultDto>> ResetPassword([FromBody] ResetPasswordRequest request, CancellationToken cancellationToken)
     {
         ResetPasswordCommand command = new()
         {
@@ -254,11 +281,13 @@ public class AuthController : ControllerBase
 
         try
         {
-            await _resetPasswordHandler.Handle(command, cancellationToken);
-            return Ok(new { message = "Паролата беше сменена успешно." });
+            PasswordResetCompletionResultDto result = await _resetPasswordHandler.Handle(command, cancellationToken);
+            _logger.LogInformation("Смяна на парола: паролата беше сменена за имейл {Email} и се изисква нова TOTP настройка.", result.Email);
+            return Ok(result);
         }
         catch (InvalidOperationException exception)
         {
+            _logger.LogWarning("Смяна на парола: завършването беше отказано: {Reason}", exception.Message);
             return BadRequest(new { message = exception.Message });
         }
     }
@@ -273,10 +302,12 @@ public class AuthController : ControllerBase
         {
             Guid userId = GetCurrentUserId();
             TotpSetupDto result = await _beginTotpSetupHandler.Handle(userId, cancellationToken);
+            _logger.LogInformation("TOTP настройка: започната е нова настройка за потребител {UserId}.", userId);
             return Ok(result);
         }
         catch (InvalidOperationException exception)
         {
+            _logger.LogWarning("TOTP настройка: неуспешен старт: {Reason}", exception.Message);
             return BadRequest(new { message = exception.Message });
         }
     }
@@ -298,10 +329,12 @@ public class AuthController : ControllerBase
         try
         {
             TotpVerificationResultDto result = await _verifyTotpSetupHandler.Handle(command, cancellationToken);
+            _logger.LogInformation("TOTP настройка: успешно потвърдена настройка за потребител {UserId}.", command.UserId);
             return Ok(result);
         }
         catch (InvalidOperationException exception)
         {
+            _logger.LogWarning("TOTP настройка: неуспешно потвърждение за потребител {UserId}: {Reason}", command.UserId, exception.Message);
             return BadRequest(new { message = exception.Message });
         }
     }
@@ -323,10 +356,12 @@ public class AuthController : ControllerBase
         try
         {
             TotpVerificationResultDto result = await _disableTotpHandler.Handle(command, cancellationToken);
+            _logger.LogInformation("TOTP настройка: двуфакторната защита е изключена за потребител {UserId}.", command.UserId);
             return Ok(result);
         }
         catch (InvalidOperationException exception)
         {
+            _logger.LogWarning("TOTP настройка: неуспешно изключване за потребител {UserId}: {Reason}", command.UserId, exception.Message);
             return BadRequest(new { message = exception.Message });
         }
     }
@@ -348,10 +383,12 @@ public class AuthController : ControllerBase
         try
         {
             TotpSetupDto result = await _resetTotpSetupHandler.Handle(command, cancellationToken);
+            _logger.LogInformation("TOTP настройка: генерирана е нова TOTP настройка за потребител {UserId}.", command.UserId);
             return Ok(result);
         }
         catch (InvalidOperationException exception)
         {
+            _logger.LogWarning("TOTP настройка: неуспешно нулиране за потребител {UserId}: {Reason}", command.UserId, exception.Message);
             return BadRequest(new { message = exception.Message });
         }
     }

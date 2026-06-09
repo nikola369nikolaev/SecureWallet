@@ -9,7 +9,9 @@ public class LoginProtectionException : InvalidOperationException
         string? captchaImageBase64 = null,
         int? lockoutSeconds = null,
         bool requiresEmailVerification = false,
-        string? email = null)
+        string? email = null,
+        string? failureStage = null,
+        int? failedAttemptCount = null)
         : base(message)
     {
         RequiresCaptcha = requiresCaptcha;
@@ -18,6 +20,8 @@ public class LoginProtectionException : InvalidOperationException
         LockoutSeconds = lockoutSeconds;
         RequiresEmailVerification = requiresEmailVerification;
         Email = email;
+        FailureStage = failureStage;
+        FailedAttemptCount = failedAttemptCount;
     }
 
     public bool RequiresCaptcha { get; }
@@ -31,4 +35,8 @@ public class LoginProtectionException : InvalidOperationException
     public string? CaptchaImageBase64 { get; }
 
     public int? LockoutSeconds { get; }
+
+    public string? FailureStage { get; }
+
+    public int? FailedAttemptCount { get; }
 }

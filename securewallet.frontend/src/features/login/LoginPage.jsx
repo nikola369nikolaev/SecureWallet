@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { loginUser, resendEmailVerificationCode, verifyEmailCode } from '../../api/authApi';
 import { ApiError } from '../../api/httpClient';
 import { useAuth } from '../../auth/AuthContext';
+import { createSessionFromAuthResult } from '../../auth/sessionStorage';
 import { CaptchaImage } from '../../components/CaptchaImage';
 
 const SESSION_EXPIRED_KEY = 'securewallet.auth.sessionExpired';
@@ -74,8 +75,8 @@ export function LoginPage() {
           code: formState.verificationCode,
         });
 
-        setSession(result);
-        navigate('/security/two-factor', { replace: true });
+        setSession(createSessionFromAuthResult(result));
+        navigate(result.securitySetupRequired ? '/security/two-factor' : '/dashboard', { replace: true });
         return;
       }
 
@@ -86,7 +87,7 @@ export function LoginPage() {
         totpCode: requiresTotp ? formState.totpCode : null,
       });
 
-      setSession(result);
+      setSession(createSessionFromAuthResult(result));
       navigate(result.securitySetupRequired ? '/security/two-factor' : '/dashboard', { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
@@ -97,9 +98,11 @@ export function LoginPage() {
         const isTotpStepPrompt = nextRequiresTotp && !formState.totpCode;
 
         if (nextRequiresEmailVerification) {
-          setInfoMessage('Имейлът и паролата са приети. Въведи 6-цифрения код от имейла, за да потвърдиш акаунта.');
+          setInfoMessage('Имейлът и паролата са приети. Въведи 6-цифрения код от имейла, за да потвърдиш акаунта. Провери и папка Spam, ако не го виждаш.');
+          setErrorMessage('');
         } else if (isTotpStepPrompt) {
-          setInfoMessage('Имейлът и паролата са приети. Въведи кода от authenticator приложението, за да завършиш входа.');
+          setInfoMessage('Имейлът и паролата са приети. Въведи временния код от authenticator приложението, за да завършиш входа.');
+          setErrorMessage('');
         } else {
           setErrorMessage(nextMessage);
         }
@@ -135,7 +138,7 @@ export function LoginPage() {
 
     try {
       const result = await resendEmailVerificationCode({ email: formState.email });
-      setInfoMessage(`${result.message} Кодът е валиден до ${new Date(result.expiresAtUtc).toLocaleString('bg-BG')}.`);
+      setInfoMessage(`${result.message} Кодът е валиден до ${new Date(result.expiresAtUtc).toLocaleString('bg-BG')}. Провери и папка Spam.`);
       setCooldownSeconds(RESEND_COOLDOWN_SECONDS);
       setFormState((current) => ({
         ...current,
@@ -163,12 +166,12 @@ export function LoginPage() {
         </p>
         <div className="hero-note-grid">
           <div className="hero-note">
-            <strong>Имейл + парола</strong>
+            <strong>Имейл и парола</strong>
             <span>Първо проверяваме имейла, паролата и дали акаунтът вече е потвърдил имейла си.</span>
           </div>
           <div className="hero-note">
             <strong>Captcha и 2FA</strong>
-            <span>При нужда системата иска captcha и след това код от authenticator приложението.</span>
+            <span>При нужда системата иска captcha и след това временен код от authenticator приложението.</span>
           </div>
         </div>
       </section>
@@ -213,7 +216,7 @@ export function LoginPage() {
 
           {requiresTotp && (
             <div className="message-box message-box--info">
-              <strong>Следваща стъпка:</strong> въведи 6-цифрения код от authenticator приложението.
+              <strong>Следваща стъпка:</strong> въведи временния 6-цифрен код от authenticator приложението.
             </div>
           )}
 
@@ -245,7 +248,12 @@ export function LoginPage() {
               </label>
 
               <div className="inline-action-row">
-                <button className="secondary-button" type="button" onClick={handleResendVerificationCode} disabled={isResending || cooldownSeconds > 0}>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={handleResendVerificationCode}
+                  disabled={isResending || cooldownSeconds > 0}
+                >
                   {isResending
                     ? 'Изпращане...'
                     : cooldownSeconds > 0
@@ -262,7 +270,15 @@ export function LoginPage() {
 
           {requiresTotp && (
             <label className="field-group">
-              <span>Код от authenticator приложението</span>
+              <span className="inline-label-with-info">
+                <span>Код от authenticator приложението</span>
+                <span className="info-tooltip-badge" tabIndex={0}>
+                  i
+                  <span className="info-tooltip-content">
+                    Това е временен 6-цифрен код от Google Authenticator, Microsoft Authenticator или друго подобно приложение.
+                  </span>
+                </span>
+              </span>
               <input
                 type="text"
                 value={formState.totpCode}

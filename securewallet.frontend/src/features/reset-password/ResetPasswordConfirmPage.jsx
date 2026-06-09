@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { completePasswordReset } from '../../api/authApi';
 import { ApiError } from '../../api/httpClient';
+import { useAuth } from '../../auth/AuthContext';
+import { createSessionFromAuthResult } from '../../auth/sessionStorage';
 
 const RESET_SESSION_STORAGE_KEY = 'securewallet.auth.passwordReset';
 
@@ -21,13 +23,13 @@ function loadResetSession() {
 
 export function ResetPasswordConfirmPage() {
   const navigate = useNavigate();
+  const { setSession } = useAuth();
   const [resetSession] = useState(() => loadResetSession());
   const [formState, setFormState] = useState({
     newPassword: '',
     confirmPassword: '',
   });
   const [errorMessage, setErrorMessage] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const passwordRules = [
@@ -37,7 +39,7 @@ export function ResetPasswordConfirmPage() {
     },
     {
       label: 'Поне една главна буква',
-      isSatisfied: /[A-Z]/.test(formState.newPassword),
+      isSatisfied: /\p{Lu}/u.test(formState.newPassword),
     },
     {
       label: 'Поне една цифра',
@@ -69,7 +71,6 @@ export function ResetPasswordConfirmPage() {
   async function handleSubmit(event) {
     event.preventDefault();
     setErrorMessage('');
-    setSuccessMessage('');
 
     if (!isPasswordReady) {
       setErrorMessage('Новата парола още не покрива всички условия.');
@@ -85,11 +86,10 @@ export function ResetPasswordConfirmPage() {
       });
 
       window.sessionStorage.removeItem(RESET_SESSION_STORAGE_KEY);
-      setSuccessMessage(result.message ?? 'Паролата беше сменена успешно.');
+      setSession(createSessionFromAuthResult(result));
 
-      navigate('/login', {
+      navigate('/security/two-factor', {
         replace: true,
-        state: { email: resetSession.email },
       });
     } catch (error) {
       if (error instanceof ApiError) {
@@ -160,7 +160,6 @@ export function ResetPasswordConfirmPage() {
           </label>
 
           {errorMessage && <div className="message-box message-box--error">{errorMessage}</div>}
-          {successMessage && <div className="message-box message-box--success">{successMessage}</div>}
 
           <button className="primary-button" type="submit" disabled={isSubmitting || !isPasswordReady}>
             {isSubmitting ? 'Изпращане...' : 'Смени паролата'}

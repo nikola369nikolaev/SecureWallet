@@ -58,8 +58,7 @@ public class RequestPasswordResetCodeHandler
         return new PasswordResetCodeDispatchResultDto
         {
             Message = dispatchResult.Message,
-            CanEnterCode = true,
-            DevelopmentCodePreview = dispatchResult.DevelopmentCodePreview
+            CanEnterCode = true
         };
     }
 

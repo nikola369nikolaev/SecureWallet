@@ -50,10 +50,13 @@ public class LoginUserHandler
             int remainingSeconds = (int)Math.Ceiling((user.LockoutEndUtc.Value - now).TotalSeconds);
             throw new LoginProtectionException(
                 $"Твърде много неуспешни опити за вход. Опитай отново след {remainingSeconds} секунди.",
-                user.FailedLoginAttempts >= CaptchaRequiredAttempts,
-                user.TwoFactorEnabled,
-                CreateCaptchaImageBase64(user.CurrentCaptchaCode),
-                remainingSeconds);
+                requiresCaptcha: user.FailedLoginAttempts >= CaptchaRequiredAttempts,
+                requiresTotp: user.TwoFactorEnabled,
+                captchaImageBase64: CreateCaptchaImageBase64(user.CurrentCaptchaCode),
+                lockoutSeconds: remainingSeconds,
+                email: user.Email,
+                failureStage: "LockoutActive",
+                failedAttemptCount: user.FailedLoginAttempts);
         }
 
         if (user.FailedLoginAttempts >= CaptchaRequiredAttempts)
@@ -71,7 +74,8 @@ public class LoginUserHandler
                     user,
                     now,
                     "Задължително е да въведеш кода от картинката.",
-                    cancellationToken);
+                    cancellationToken,
+                    "MissingCaptcha");
 
                 throw missingCaptchaException;
             }
@@ -83,7 +87,8 @@ public class LoginUserHandler
                     user,
                     now,
                     "Кодът от картинката е грешен.",
-                    cancellationToken);
+                    cancellationToken,
+                    "InvalidCaptcha");
 
                 throw captchaException;
             }
@@ -95,7 +100,8 @@ public class LoginUserHandler
                 user,
                 now,
                 "Грешен имейл или парола.",
-                cancellationToken);
+                cancellationToken,
+                "InactiveUser");
 
             throw inactiveUserException;
         }
@@ -107,7 +113,8 @@ public class LoginUserHandler
                 user,
                 now,
                 "Грешен имейл или парола.",
-                cancellationToken);
+                cancellationToken,
+                "InvalidPassword");
 
             throw invalidPasswordException;
         }
@@ -118,8 +125,10 @@ public class LoginUserHandler
 
             throw new LoginProtectionException(
                 "Имейлът още не е потвърден. Въведи кода от имейла, за да продължиш.",
+                email: user.Email,
                 requiresEmailVerification: true,
-                email: user.Email);
+                failureStage: "EmailVerificationRequired",
+                failedAttemptCount: user.FailedLoginAttempts);
         }
 
         if (!user.TwoFactorEnabled)
@@ -132,10 +141,12 @@ public class LoginUserHandler
         {
             throw new LoginProtectionException(
                 "Нужен е код от authenticator приложението.",
-                user.FailedLoginAttempts >= CaptchaRequiredAttempts,
-                true,
-                CreateCaptchaImageBase64(user.CurrentCaptchaCode),
-                null);
+                requiresCaptcha: user.FailedLoginAttempts >= CaptchaRequiredAttempts,
+                requiresTotp: true,
+                captchaImageBase64: CreateCaptchaImageBase64(user.CurrentCaptchaCode),
+                email: user.Email,
+                failureStage: "MissingTotp",
+                failedAttemptCount: user.FailedLoginAttempts);
         }
 
         bool isTotpCodeValid = !string.IsNullOrWhiteSpace(user.TotpSecret) &&
@@ -148,6 +159,7 @@ public class LoginUserHandler
                 now,
                 "Кодът от authenticator приложението е грешен.",
                 cancellationToken,
+                "InvalidTotp",
                 true);
 
             throw invalidTotpException;
@@ -202,6 +214,7 @@ public class LoginUserHandler
         DateTime now,
         string defaultMessage,
         CancellationToken cancellationToken,
+        string failureStage,
         bool requiresTotp = false)
     {
         user.FailedLoginAttempts += 1;
@@ -234,10 +247,13 @@ public class LoginUserHandler
         {
             return new LoginProtectionException(
                 $"Твърде много неуспешни опити за вход. Входът е заключен за {lockoutSeconds.Value} секунди.",
-                requiresCaptcha,
-                requiresTotp,
-                CreateCaptchaImageBase64(user.CurrentCaptchaCode),
-                lockoutSeconds);
+                requiresCaptcha: requiresCaptcha,
+                requiresTotp: requiresTotp,
+                captchaImageBase64: CreateCaptchaImageBase64(user.CurrentCaptchaCode),
+                lockoutSeconds: lockoutSeconds,
+                email: user.Email,
+                failureStage: failureStage,
+                failedAttemptCount: user.FailedLoginAttempts);
         }
 
         if (requiresCaptcha)
@@ -248,12 +264,21 @@ public class LoginUserHandler
 
             return new LoginProtectionException(
                 message,
-                true,
-                requiresTotp,
-                CreateCaptchaImageBase64(user.CurrentCaptchaCode));
+                requiresCaptcha: true,
+                requiresTotp: requiresTotp,
+                captchaImageBase64: CreateCaptchaImageBase64(user.CurrentCaptchaCode),
+                email: user.Email,
+                failureStage: failureStage,
+                failedAttemptCount: user.FailedLoginAttempts);
         }
 
-        return new LoginProtectionException(defaultMessage, false, requiresTotp);
+        return new LoginProtectionException(
+            defaultMessage,
+            requiresCaptcha: false,
+            requiresTotp: requiresTotp,
+            email: user.Email,
+            failureStage: failureStage,
+            failedAttemptCount: user.FailedLoginAttempts);
     }
 
     private string? CreateCaptchaImageBase64(string? captchaCode)

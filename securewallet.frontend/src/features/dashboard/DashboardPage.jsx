@@ -35,6 +35,34 @@ function formatDate(value) {
   }).format(new Date(value));
 }
 
+function getCurrentAnalysisPeriod() {
+  const now = new Date();
+
+  return {
+    month: now.getMonth() + 1,
+    year: now.getFullYear(),
+  };
+}
+
+function getAnalysisMonthOptions() {
+  const now = new Date();
+
+  return Array.from({ length: 12 }, (_, index) => {
+    const current = new Date(now.getFullYear(), now.getMonth() - index, 1);
+    const label = new Intl.DateTimeFormat('bg-BG', {
+      month: 'long',
+      year: 'numeric',
+    }).format(current);
+
+    return {
+      key: `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`,
+      month: current.getMonth() + 1,
+      year: current.getFullYear(),
+      label: `${label.charAt(0).toUpperCase()}${label.slice(1)}`,
+    };
+  });
+}
+
 function getTransactionTitle(transaction) {
   if (transaction.isIncoming && transaction.counterpartyUsername === 'SecureWallet') {
     return 'Депозит в портфейла';
@@ -63,11 +91,15 @@ export function DashboardPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
+  const [selectedAnalysisPeriod, setSelectedAnalysisPeriod] = useState(getCurrentAnalysisPeriod);
   const [isDepositOpen, setIsDepositOpen] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
   const [depositTotpCode, setDepositTotpCode] = useState('');
   const [depositErrorMessage, setDepositErrorMessage] = useState('');
   const [isDepositing, setIsDepositing] = useState(false);
+
+  const analysisMonthOptions = getAnalysisMonthOptions();
+  const selectedAnalysisPeriodKey = `${selectedAnalysisPeriod.year}-${String(selectedAnalysisPeriod.month).padStart(2, '0')}`;
 
   const loadDashboard = useCallback(async () => {
     if (!session?.accessToken) {
@@ -82,7 +114,16 @@ export function DashboardPage() {
       const [walletResult, recentTransactionsResult, analysisSummaryResult] = await Promise.all([
         getCurrentWallet(session.accessToken),
         getTransactionHistoryPage({ page: 1, pageSize: 5 }, session.accessToken),
-        getTransactionHistoryPage({ dateRange: 'Last30Days', page: 1, pageSize: 1 }, session.accessToken),
+        getTransactionHistoryPage(
+          {
+            dateRange: 'Month',
+            month: selectedAnalysisPeriod.month,
+            year: selectedAnalysisPeriod.year,
+            page: 1,
+            pageSize: 1,
+          },
+          session.accessToken,
+        ),
       ]);
 
       setWallet(walletResult);
@@ -102,7 +143,7 @@ export function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [logout, navigate, session?.accessToken]);
+  }, [logout, navigate, selectedAnalysisPeriod.month, selectedAnalysisPeriod.year, session?.accessToken]);
 
   useEffect(() => {
     loadDashboard();
@@ -167,7 +208,7 @@ export function DashboardPage() {
       }).format(wallet.balance)
     : '';
 
-  const hiddenBalance = wallet ? `•••• ${wallet.currency}` : '••••';
+  const hiddenBalance = '****';
 
   const formattedCreatedAt = wallet?.createdAtUtc
     ? new Intl.DateTimeFormat('bg-BG', {
@@ -183,6 +224,15 @@ export function DashboardPage() {
       }).format(new Date(session.expiresAtUtc))
     : '-';
 
+  function handleAnalysisPeriodChange(event) {
+    const [year, month] = event.target.value.split('-').map(Number);
+
+    setSelectedAnalysisPeriod({
+      month,
+      year,
+    });
+  }
+
   const emailVerified = wallet?.isEmailVerified ?? session?.isEmailVerified ?? false;
   const hasStaffAccess = session?.role === 'Admin' || session?.role === 'Support';
   const hasAdminAccess = session?.role === 'Admin';
@@ -194,10 +244,6 @@ export function DashboardPage() {
           <div>
             <p className="eyebrow">Начало</p>
             <h1>Добре дошъл, {wallet?.username ?? session?.username}</h1>
-            <p className="dashboard-copy">
-              Това е текущият начален екран на портфейла. Данните идват от защитен backend endpoint,
-              а скорошните транзакции идват от отделен backend history endpoint.
-            </p>
           </div>
           <button className="secondary-button" onClick={logout} type="button">
             Изход
@@ -224,6 +270,11 @@ export function DashboardPage() {
               Създай support
             </Link>
           )}
+          {hasAdminAccess && (
+            <Link className="secondary-link-button" to="/admin/logs">
+              Логове
+            </Link>
+          )}
           <Link className="secondary-link-button" to="/settings">
             Още
           </Link>
@@ -240,7 +291,7 @@ export function DashboardPage() {
                   <p className="eyebrow">Депозит</p>
                   <h2>Добави пари в портфейла</h2>
                   <p className="dashboard-copy">
-                    Въведи сумата и потвърди операцията с код от authenticator приложението.
+                    Въведи сумата и потвърди операцията с временен код.
                   </p>
                 </div>
                 <button className="secondary-button" onClick={closeDepositModal} type="button">
@@ -263,7 +314,15 @@ export function DashboardPage() {
                   </label>
 
                   <label className="field-group">
-                    <span>TOTP код</span>
+                    <span className="inline-label-with-info">
+                      <span>Временен код</span>
+                      <span className="info-tooltip-badge" tabIndex={0}>
+                        i
+                        <span className="info-tooltip-content">
+                          Отвори Google Authenticator, Microsoft Authenticator или друго подобно приложение.
+                        </span>
+                      </span>
+                    </span>
                     <input
                       type="text"
                       value={depositTotpCode}
@@ -302,30 +361,33 @@ export function DashboardPage() {
               </button>
             </div>
             <div className="dashboard-balance-profile-grid">
-              <dl>
-                <div>
-                  <dt>Баланс</dt>
-                  <dd>
+              <div className="dashboard-balance-column">
+                <div className="dashboard-balance-hero">
+                  <span className="dashboard-balance-hero__label">Баланс</span>
+                  <strong className="dashboard-balance-hero__amount">
                     {isLoading
                       ? 'Зареждане...'
                       : isBalanceVisible
                         ? `${formattedBalance} ${wallet?.currency ?? ''}`.trim()
                         : hiddenBalance}
-                  </dd>
+                  </strong>
                 </div>
-                <div>
-                  <dt>Валута</dt>
-                  <dd>{isLoading ? 'Зареждане...' : wallet?.currency ?? '-'}</dd>
-                </div>
-                <div>
-                  <dt>Статус</dt>
-                  <dd>{isLoading ? 'Зареждане...' : wallet?.isActive ? 'Активен' : 'Неактивен'}</dd>
-                </div>
-                <div>
-                  <dt>Създаден на</dt>
-                  <dd>{isLoading ? 'Зареждане...' : formattedCreatedAt || '-'}</dd>
-                </div>
-              </dl>
+
+                <dl className="dashboard-balance-meta">
+                  <div>
+                    <dt>Валута</dt>
+                    <dd>{isLoading ? 'Зареждане...' : wallet?.currency ?? '-'}</dd>
+                  </div>
+                  <div>
+                    <dt>Статус</dt>
+                    <dd>{isLoading ? 'Зареждане...' : wallet?.isActive ? 'Активен' : 'Неактивен'}</dd>
+                  </div>
+                  <div>
+                    <dt>Създаден на</dt>
+                    <dd>{isLoading ? 'Зареждане...' : formattedCreatedAt || '-'}</dd>
+                  </div>
+                </dl>
+              </div>
 
               <dl>
                 <div>
@@ -399,8 +461,20 @@ export function DashboardPage() {
             </article>
 
             <article className="dashboard-card dashboard-analysis-card">
-              <h2>Анализ за последните 30 дни</h2>
-              <p className="field-hint">Тези числа идват готови от backend-а.</p>
+              <div className="card-header-inline">
+                <h2>Месечен анализ</h2>
+                <label className="field-group">
+                  <span>Месец</span>
+                  <select value={selectedAnalysisPeriodKey} onChange={handleAnalysisPeriodChange}>
+                    {analysisMonthOptions.map((option) => (
+                      <option key={option.key} value={option.key}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <p className="field-hint">Избери месец, за да видиш справката, подготвена от backend-а.</p>
 
               <div className="dashboard-summary-grid">
                 <div className="dashboard-summary-tile">

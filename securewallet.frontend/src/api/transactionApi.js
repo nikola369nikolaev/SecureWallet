@@ -19,6 +19,14 @@ export function getTransactionHistoryPage(filters, accessToken) {
     params.set('dateRange', filters.dateRange);
   }
 
+  if (filters?.month) {
+    params.set('month', String(filters.month));
+  }
+
+  if (filters?.year) {
+    params.set('year', String(filters.year));
+  }
+
   if (filters?.searchTerm) {
     params.set('searchTerm', filters.searchTerm);
   }

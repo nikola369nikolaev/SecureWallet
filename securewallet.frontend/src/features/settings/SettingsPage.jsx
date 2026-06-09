@@ -104,6 +104,7 @@ export function SettingsPage() {
   }, [logout, navigate, session?.accessToken]);
 
   const emailVerified = wallet?.isEmailVerified ?? session?.isEmailVerified ?? false;
+  const isTwoFactorEnabled = session?.twoFactorEnabled ?? false;
 
   async function copyValue(value, label) {
     if (!value) {
@@ -129,7 +130,7 @@ export function SettingsPage() {
             <p className="eyebrow">Още</p>
             <h1>Профил, сигурност и карта</h1>
             <p className="dashboard-copy">
-              Тук събираме информацията за акаунта, защитата и картовите детайли, които идват от backend-а.
+              Тук събираме информацията за акаунта, защитата и картовите детайли.
             </p>
           </div>
           <Link className="secondary-link-button" to="/dashboard">
@@ -184,91 +185,113 @@ export function SettingsPage() {
               </div>
             </dl>
 
-            <div className="inline-action-row">
-              <Link className="secondary-link-button" to="/security/two-factor">
-                Управлявай TOTP
+            <div className="settings-toggle-card">
+              <div>
+                <p className="settings-toggle-title">Управлявай временния си код</p>
+                <p className="field-hint">
+                  Натисни превключвателя, за да отвориш настройката на двуфакторната защита.
+                </p>
+              </div>
+              <Link
+                className={`toggle-link-button ${isTwoFactorEnabled ? 'toggle-link-button--on' : 'toggle-link-button--off'}`}
+                to="/security/two-factor"
+                role="switch"
+                aria-checked={isTwoFactorEnabled}
+              >
+                <span className="toggle-link-button__track">
+                  <span className="toggle-link-button__thumb" />
+                </span>
+                <span className="toggle-link-button__label">{isTwoFactorEnabled ? 'Включено' : 'Изключено'}</span>
               </Link>
             </div>
           </article>
 
           <article className="dashboard-card dashboard-card--full">
             <h2>Детайли на картата</h2>
-            <dl>
-              <div>
-                <dt>IBAN</dt>
-                <dd>
+            <div className="card-details-grid">
+              <div className="card-detail-tile">
+                <span className="card-detail-label">IBAN</span>
+                <strong className="card-detail-value card-detail-value--mono">
                   {isLoading ? 'Зареждане...' : formatIban(wallet?.iban)}
-                  {!isLoading && wallet?.iban && (
+                </strong>
+                {!isLoading && wallet?.iban && (
+                  <div className="card-detail-actions">
                     <button
-                      className="secondary-button"
+                      className="secondary-button secondary-button--compact"
                       onClick={() => copyValue(wallet.iban, 'IBAN')}
-                      style={{ marginLeft: '0.75rem' }}
                       type="button"
                     >
                       Копирай
                     </button>
-                  )}
-                </dd>
+                  </div>
+                )}
               </div>
-              <div>
-                <dt>Номер на картата</dt>
-                <dd>
+
+              <div className="card-detail-tile">
+                <span className="card-detail-label">Номер на картата</span>
+                <strong className="card-detail-value card-detail-value--mono">
                   {isLoading
                     ? 'Зареждане...'
                     : isCardNumberVisible
                       ? formatCardNumber(wallet?.cardNumber)
                       : '**** **** **** ****'}
-                  {!isLoading && wallet?.cardNumber && (
-                    <>
-                      <button
-                        className="secondary-button"
-                        onClick={() => setIsCardNumberVisible((current) => !current)}
-                        style={{ marginLeft: '0.75rem' }}
-                        type="button"
-                      >
-                        {isCardNumberVisible ? 'Скрий' : 'Покажи'}
-                      </button>
-                      <button
-                        className="secondary-button"
-                        onClick={() => copyValue(wallet.cardNumber, 'Номерът на картата')}
-                        style={{ marginLeft: '0.5rem' }}
-                        type="button"
-                      >
-                        Копирай
-                      </button>
-                    </>
-                  )}
-                </dd>
+                </strong>
+                {!isLoading && wallet?.cardNumber && (
+                  <div className="card-detail-actions">
+                    <button
+                      className="secondary-button secondary-button--compact"
+                      onClick={() => setIsCardNumberVisible((current) => !current)}
+                      type="button"
+                    >
+                      {isCardNumberVisible ? 'Скрий' : 'Покажи'}
+                    </button>
+                    <button
+                      className="secondary-button secondary-button--compact"
+                      onClick={() => copyValue(wallet.cardNumber, 'Номерът на картата')}
+                      type="button"
+                    >
+                      Копирай
+                    </button>
+                  </div>
+                )}
               </div>
-              <div>
-                <dt>Валидна до</dt>
-                <dd>{isLoading ? 'Зареждане...' : formatCardExpiry(wallet?.cardExpiresAtUtc)}</dd>
+
+              <div className="card-detail-tile">
+                <span className="card-detail-label">Валидна до</span>
+                <strong className="card-detail-value">
+                  {isLoading ? 'Зареждане...' : formatCardExpiry(wallet?.cardExpiresAtUtc)}
+                </strong>
               </div>
-              <div>
-                <dt>CVV код</dt>
-                <dd>
+
+              <div className="card-detail-tile">
+                <span className="card-detail-label">CVV код</span>
+                <strong className="card-detail-value card-detail-value--mono">
                   {isLoading
                     ? 'Зареждане...'
                     : isCvvVisible
                       ? wallet?.cardCvv ?? '-'
                       : '***'}
-                  {!isLoading && wallet?.cardCvv && (
+                </strong>
+                {!isLoading && wallet?.cardCvv && (
+                  <div className="card-detail-actions">
                     <button
-                      className="secondary-button"
+                      className="secondary-button secondary-button--compact"
                       onClick={() => setIsCvvVisible((current) => !current)}
-                      style={{ marginLeft: '0.75rem' }}
                       type="button"
                     >
                       {isCvvVisible ? 'Скрий' : 'Покажи'}
                     </button>
-                  )}
-                </dd>
+                  </div>
+                )}
               </div>
-              <div>
-                <dt>Картата е създадена на</dt>
-                <dd>{isLoading ? 'Зареждане...' : formatDateTime(wallet?.cardCreatedAtUtc)}</dd>
+
+              <div className="card-detail-tile card-detail-tile--wide">
+                <span className="card-detail-label">Картата е създадена на</span>
+                <strong className="card-detail-value">
+                  {isLoading ? 'Зареждане...' : formatDateTime(wallet?.cardCreatedAtUtc)}
+                </strong>
               </div>
-            </dl>
+            </div>
           </article>
         </div>
       </section>

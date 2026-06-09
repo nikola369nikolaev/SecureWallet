@@ -54,7 +54,7 @@ public class TransactionRepository : ITransactionRepository
 
         IQueryable<Transaction> baseFilteredQuery = ApplyDateRangeFilter(
             ApplySearchFilter(walletTransactionsQuery, queryParameters.SearchTerm),
-            queryParameters.DateRange);
+            queryParameters);
 
         TransactionHistorySummaryDto summary = new()
         {
@@ -167,8 +167,12 @@ public class TransactionRepository : ITransactionRepository
             (transaction.Description != null && transaction.Description.ToLower().Contains(normalizedSearchTerm)));
     }
 
-    private static IQueryable<Transaction> ApplyDateRangeFilter(IQueryable<Transaction> query, string? dateRange)
+    private static IQueryable<Transaction> ApplyDateRangeFilter(
+        IQueryable<Transaction> query,
+        TransactionHistoryQueryParametersDto queryParameters)
     {
+        string? dateRange = queryParameters.DateRange;
+
         if (string.Equals(dateRange, "Today", StringComparison.OrdinalIgnoreCase))
         {
             DateTime startOfToday = DateTime.UtcNow.Date;
@@ -185,6 +189,18 @@ public class TransactionRepository : ITransactionRepository
         {
             DateTime rangeStart = DateTime.UtcNow.AddDays(-30);
             return query.Where(transaction => transaction.CreatedAtUtc >= rangeStart);
+        }
+
+        if (string.Equals(dateRange, "Month", StringComparison.OrdinalIgnoreCase))
+        {
+            int month = queryParameters.Month ?? DateTime.UtcNow.Month;
+            int year = queryParameters.Year ?? DateTime.UtcNow.Year;
+            DateTime rangeStart = new(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+            DateTime rangeEnd = rangeStart.AddMonths(1);
+
+            return query.Where(transaction =>
+                transaction.CreatedAtUtc >= rangeStart &&
+                transaction.CreatedAtUtc < rangeEnd);
         }
 
         return query;

@@ -43,11 +43,14 @@ export function TransferPage() {
     amount: '',
     description: '',
   });
+  const [transferTotpCode, setTransferTotpCode] = useState('');
+  const [pendingTransferPayload, setPendingTransferPayload] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [transferReference, setTransferReference] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
   useEffect(() => {
     let isActive = true;
@@ -107,21 +110,62 @@ export function TransferPage() {
     }));
   }
 
-  async function handleSubmit(event) {
-    event.preventDefault();
+  function openTransferConfirmation(event) {
+    event?.preventDefault();
+    setErrorMessage('');
+    setSuccessMessage('');
+    setTransferReference('');
+
+    const amount = Number(formState.amount.replace(',', '.'));
+    const recipientValue = formState.recipientValue.trim();
+    const description = formState.description.trim();
+
+    if (!recipientValue) {
+      setErrorMessage('Полето за получател е задължително.');
+      return;
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setErrorMessage('Сумата трябва да е по-голяма от 0.');
+      return;
+    }
+
+    setPendingTransferPayload({
+      recipientType: formState.recipientType,
+      recipientValue,
+      amount,
+      description,
+    });
+    setTransferTotpCode('');
+    setIsConfirmModalOpen(true);
+  }
+
+  function closeTransferConfirmation() {
+    if (isSubmitting) {
+      return;
+    }
+
+    setIsConfirmModalOpen(false);
+    setTransferTotpCode('');
+    setPendingTransferPayload(null);
+  }
+
+  async function handleConfirmTransfer() {
+    if (!pendingTransferPayload) {
+      return;
+    }
+
     setErrorMessage('');
     setSuccessMessage('');
     setTransferReference('');
     setIsSubmitting(true);
 
     try {
-      const amount = Number(formState.amount.replace(',', '.'));
       const result = await createTransfer(
         {
-          recipientType: formState.recipientType,
-          recipientValue: formState.recipientValue,
-          amount,
-          description: formState.description,
+          ...pendingTransferPayload,
+          description: pendingTransferPayload.description || null,
+          totpCode: transferTotpCode,
         },
         session.accessToken,
       );
@@ -136,12 +180,15 @@ export function TransferPage() {
             }
           : current,
       );
-      setFormState({
-        recipientType: formState.recipientType,
+      setFormState((current) => ({
+        recipientType: current.recipientType,
         recipientValue: '',
         amount: '',
         description: '',
-      });
+      }));
+      setTransferTotpCode('');
+      setPendingTransferPayload(null);
+      setIsConfirmModalOpen(false);
     } catch (error) {
       if (error instanceof ApiError) {
         if (error.status === 401) {
@@ -171,9 +218,6 @@ export function TransferPage() {
           <div>
             <p className="eyebrow">Преводи</p>
             <h1>Нов превод към потребител, телефон или IBAN</h1>
-            <p className="dashboard-copy">
-              Backend-ът решава към кой акаунт отива преводът според избрания тип получател и не позволява неясни съвпадения.
-            </p>
           </div>
           <Link className="secondary-link-button" to="/dashboard">
             Назад към началото
@@ -190,24 +234,38 @@ export function TransferPage() {
         </div>
 
         <div className="dashboard-grid">
-          <article className="dashboard-card">
+          <article className="dashboard-card transfer-balance-card">
+            <p className="eyebrow">Портфейл</p>
             <h2>Наличност</h2>
-            <dl>
-              <div>
-                <dt>Текущ баланс</dt>
-                <dd>{isLoading || !wallet ? 'Зареждане...' : formatBalance(wallet.balance, wallet.currency)}</dd>
+
+            <div className="transfer-balance-hero">
+              <span className="transfer-balance-hero__label">Текущ баланс</span>
+              <strong className="transfer-balance-hero__amount">
+                {isLoading || !wallet ? 'Зареждане...' : formatBalance(wallet.balance, wallet.currency)}
+              </strong>
+            </div>
+
+            <div className="transfer-balance-grid">
+              <div className="transfer-balance-tile">
+                <span className="transfer-balance-tile__label">Валута</span>
+                <strong>{isLoading || !wallet ? 'Зареждане...' : wallet.currency}</strong>
               </div>
-              <div>
-                <dt>Валута</dt>
-                <dd>{isLoading || !wallet ? 'Зареждане...' : wallet.currency}</dd>
+
+              <div className="transfer-balance-tile">
+                <span className="transfer-balance-tile__label">Статус</span>
+                <strong>{isLoading ? 'Зареждане...' : 'Готов за превод'}</strong>
               </div>
-            </dl>
+            </div>
+
+            <p className="field-hint">
+              
+            </p>
           </article>
 
           <article className="dashboard-card">
-            <h2>Данни за превода</h2>
+            <h2>Начин на превод</h2>
 
-            <form className="auth-form" onSubmit={handleSubmit}>
+            <form className="auth-form" onSubmit={openTransferConfirmation}>
               <div className="recipient-type-grid">
                 {recipientTypeOptions.map((option) => (
                   <button
@@ -259,13 +317,73 @@ export function TransferPage() {
                 </div>
               )}
 
-              <button className="primary-button" type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Изпращане...' : 'Изпрати превода'}
+              <button className="primary-button" type="button" onClick={openTransferConfirmation} disabled={isSubmitting}>
+                Продължи към потвърждение
               </button>
             </form>
           </article>
         </div>
       </section>
+
+      {isConfirmModalOpen && pendingTransferPayload && (
+        <div className="modal-backdrop" onClick={closeTransferConfirmation}>
+          <article className="dashboard-card modal-card" onClick={(event) => event.stopPropagation()}>
+            <div className="dashboard-header dashboard-header--compact">
+              <div>
+                <p className="eyebrow">Потвърждение</p>
+                <h2>Потвърди превода с временен код</h2>
+                <p className="dashboard-copy">
+                  Всеки превод се завършва само след валиден временен код.
+                </p>
+              </div>
+              <button className="secondary-button" type="button" onClick={closeTransferConfirmation} disabled={isSubmitting}>
+                Затвори
+              </button>
+            </div>
+
+            <div className="message-box message-box--info">
+              Получател: <strong>{pendingTransferPayload.recipientValue}</strong><br />
+              Сума: <strong>{formatBalance(pendingTransferPayload.amount, wallet?.currency ?? 'EUR')}</strong>
+              {pendingTransferPayload.description && (
+                <>
+                  <br />
+                  Коментар: <strong>{pendingTransferPayload.description}</strong>
+                </>
+              )}
+            </div>
+
+            <div className="auth-form">
+              <label className="field-group">
+                <span className="inline-label-with-info">
+                  <span>Временен код</span>
+                  <span className="info-tooltip-badge" tabIndex={0}>
+                    i
+                    <span className="info-tooltip-content">
+                      Това е временен 6-цифрен код от Google Authenticator, Microsoft Authenticator или друго подобно приложение.
+                    </span>
+                  </span>
+                </span>
+                <input
+                  type="text"
+                  value={transferTotpCode}
+                  onChange={(event) => setTransferTotpCode(event.target.value)}
+                  placeholder="123456"
+                  inputMode="numeric"
+                />
+              </label>
+
+              <div className="inline-action-row">
+                <button className="primary-button" type="button" onClick={handleConfirmTransfer} disabled={isSubmitting}>
+                  {isSubmitting ? 'Изпращане...' : 'Изпрати превода'}
+                </button>
+                <button className="secondary-button" type="button" onClick={closeTransferConfirmation} disabled={isSubmitting}>
+                  Отказ
+                </button>
+              </div>
+            </div>
+          </article>
+        </div>
+      )}
     </main>
   );
 }

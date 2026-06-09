@@ -32,10 +32,25 @@ public class GetCurrentUserTransactionHistoryHandler
         {
             Type = string.IsNullOrWhiteSpace(queryParameters.Type) ? "All" : queryParameters.Type,
             DateRange = string.IsNullOrWhiteSpace(queryParameters.DateRange) ? "All" : queryParameters.DateRange,
+            Month = queryParameters.Month,
+            Year = queryParameters.Year,
             SearchTerm = queryParameters.SearchTerm ?? string.Empty,
             Page = queryParameters.Page <= 0 ? 1 : queryParameters.Page,
             PageSize = queryParameters.PageSize <= 0 ? 20 : Math.Min(queryParameters.PageSize, 50)
         };
+
+        if (string.Equals(normalizedQueryParameters.DateRange, "Month", StringComparison.OrdinalIgnoreCase))
+        {
+            DateTime now = DateTime.UtcNow;
+
+            normalizedQueryParameters.Month = normalizedQueryParameters.Month is >= 1 and <= 12
+                ? normalizedQueryParameters.Month
+                : now.Month;
+
+            normalizedQueryParameters.Year = normalizedQueryParameters.Year is > 0
+                ? normalizedQueryParameters.Year
+                : now.Year;
+        }
 
         return await _transactionRepository.GetHistoryPageAsync(
             wallet.Id,

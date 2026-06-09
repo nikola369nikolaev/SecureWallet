@@ -1,6 +1,7 @@
 ﻿using SecureWallet.Application.Features.Auth.Validators;
 using SecureWallet.Application.Features.Transactions.DTOs;
 using SecureWallet.Application.Interfaces.Repositories;
+using SecureWallet.Application.Interfaces.Security;
 using SecureWallet.Domain.Entities;
 using SecureWallet.Domain.Enums;
 
@@ -15,15 +16,18 @@ public class CreateTransferHandler
     private readonly IWalletRepository _walletRepository;
     private readonly IUserRepository _userRepository;
     private readonly ITransactionRepository _transactionRepository;
+    private readonly ITotpService _totpService;
 
     public CreateTransferHandler(
         IWalletRepository walletRepository,
         IUserRepository userRepository,
-        ITransactionRepository transactionRepository)
+        ITransactionRepository transactionRepository,
+        ITotpService totpService)
     {
         _walletRepository = walletRepository;
         _userRepository = userRepository;
         _transactionRepository = transactionRepository;
+        _totpService = totpService;
     }
 
     public async Task<TransferResultDto> Handle(CreateTransferCommand command, CancellationToken cancellationToken = default)
@@ -31,6 +35,24 @@ public class CreateTransferHandler
         ValidateRecipient(command.RecipientType, command.RecipientValue);
         ValidateAmount(command.Amount);
         ValidateDescription(command.Description);
+        ValidateTotpCode(command.TotpCode);
+
+        User? senderUser = await _userRepository.GetByIdAsync(command.SenderUserId, cancellationToken);
+        if (senderUser is null || !senderUser.IsActive)
+        {
+            throw new InvalidOperationException("Потребителят не беше намерен.");
+        }
+
+        if (!senderUser.TwoFactorEnabled || string.IsNullOrWhiteSpace(senderUser.TotpSecret))
+        {
+            throw new InvalidOperationException("Първо трябва да включиш двуфакторната защита.");
+        }
+
+        bool isTotpCodeValid = _totpService.VerifyCode(senderUser.TotpSecret, command.TotpCode);
+        if (!isTotpCodeValid)
+        {
+            throw new InvalidOperationException("Кодът от authenticator приложението е грешен.");
+        }
 
         Wallet? senderWallet = await _walletRepository.GetByUserIdAsync(command.SenderUserId, cancellationToken);
         if (senderWallet is null)
@@ -215,6 +237,12 @@ public class CreateTransferHandler
         {
             throw new InvalidOperationException("Коментарът може да е най-много 500 символа.");
         }
+    }
+
+    private static void ValidateTotpCode(string totpCode)
+    {
+        AuthInputValidator.ValidateRequiredField(totpCode, "Кодът от authenticator приложението");
+        AuthInputValidator.ValidateNoLeadingOrTrailingWhitespace(totpCode, "Кодът от authenticator приложението");
     }
 
     private static string GenerateReference()

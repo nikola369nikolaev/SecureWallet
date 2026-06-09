@@ -1,0 +1,211 @@
+﻿
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 14, 24, 0.72);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  z-index: 20;
+}
+
+.modal-card {
+  width: min(760px, 100%);
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+}
+
+.dashboard-header--compact {
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.inline-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 720px) {
+  .modal-backdrop {
+    padding: 1rem;
+    align-items: flex-end;
+  }
+
+  .modal-card {
+    width: 100%;
+  }
+
+  .inline-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card-header-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.visibility-toggle-button {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f5ede6;
+  border-radius: 999px;
+  padding: 0.65rem 1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.visibility-toggle-button:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.recipient-type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.recipient-type-button {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f4ede8;
+  border-radius: 18px;
+  padding: 0.9rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.recipient-type-button:hover {
+  border-color: rgba(255, 168, 88, 0.5);
+}
+
+.recipient-type-button--active {
+  border-color: rgba(255, 145, 56, 0.85);
+  background: linear-gradient(135deg, rgba(255, 137, 41, 0.22), rgba(255, 255, 255, 0.05));
+  box-shadow: 0 0 0 1px rgba(255, 145, 56, 0.16);
+}
+
+@media (max-width: 720px) {
+  .card-header-inline {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .recipient-type-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.history-filter-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.history-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.history-search-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  width: min(420px, 100%);
+}
+
+.history-search-field span {
+  font-size: 0.92rem;
+  color: #d9cfc6;
+}
+
+.history-search-field input {
+  width: 100%;
+}
+
+.history-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.history-summary-card {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  padding: 1rem 1.15rem;
+  background: rgba(255, 255, 255, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.history-summary-card strong {
+  font-size: 1.2rem;
+  color: #fff6ee;
+}
+
+.history-summary-meta {
+  font-size: 0.92rem;
+  color: #d8cec4;
+}
+
+.history-summary-label {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #cdbfb3;
+}
+
+.history-load-more-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.25rem;
+}
+
+.history-filter-button {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f4ede8;
+  border-radius: 999px;
+  padding: 0.7rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.history-filter-button:hover {
+  border-color: rgba(255, 168, 88, 0.5);
+}
+
+.history-filter-button--active {
+  border-color: rgba(255, 145, 56, 0.85);
+  background: linear-gradient(135deg, rgba(255, 137, 41, 0.22), rgba(255, 255, 255, 0.05));
+  box-shadow: 0 0 0 1px rgba(255, 145, 56, 0.16);
+}
+
+@media (max-width: 720px) {
+  .history-controls {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .history-filter-grid {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .history-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}

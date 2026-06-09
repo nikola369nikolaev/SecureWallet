@@ -77,21 +77,26 @@ public static class AuthInputValidator
             return;
         }
 
-        if (!phoneNumber.StartsWith('+'))
+        if (!phoneNumber.StartsWith("+359"))
         {
-            throw new InvalidOperationException("Телефонният номер трябва да започва с '+'.");
+            throw new InvalidOperationException("Телефонният номер трябва да започва с '+359'.");
         }
 
-        string digits = phoneNumber[1..];
+        string subscriberNumber = phoneNumber[4..];
 
-        if (digits.Length < 8 || digits.Length > 15)
+        if (subscriberNumber.Length != 9)
         {
-            throw new InvalidOperationException("Телефонният номер трябва да съдържа между 8 и 15 цифри след '+'.");
+            throw new InvalidOperationException("Телефонният номер трябва да съдържа точно 9 цифри след +359.");
         }
 
-        if (!digits.All(char.IsDigit))
+        if (!subscriberNumber.All(char.IsDigit))
         {
-            throw new InvalidOperationException("Телефонният номер трябва да започва с '+' и след него да има само цифри.");
+            throw new InvalidOperationException("Телефонният номер трябва да започва с '+359' и след него да има само цифри.");
+        }
+
+        if (subscriberNumber[0] == '0')
+        {
+            throw new InvalidOperationException("Първата цифра след +359 не може да бъде 0.");
         }
     }
 

@@ -44,6 +44,7 @@ export function RegisterPage() {
       const subscriberNumber = nextValue
         .slice(BG_PHONE_PREFIX.length)
         .replace(/\D/g, '')
+        .replace(/^0+/, '')
         .slice(0, BG_PHONE_DIGITS_LENGTH);
 
       updateField('phoneNumber', `${BG_PHONE_PREFIX}${subscriberNumber}`);
@@ -56,7 +57,7 @@ export function RegisterPage() {
       digitsOnly = digitsOnly.slice(3);
     }
 
-    digitsOnly = digitsOnly.slice(0, BG_PHONE_DIGITS_LENGTH);
+    digitsOnly = digitsOnly.replace(/^0+/, '').slice(0, BG_PHONE_DIGITS_LENGTH);
 
     updateField('phoneNumber', `${BG_PHONE_PREFIX}${digitsOnly}`);
   }
@@ -66,7 +67,7 @@ export function RegisterPage() {
       ? formState.phoneNumber.slice(BG_PHONE_PREFIX.length)
       : '';
 
-    return subscriberNumber.length === BG_PHONE_DIGITS_LENGTH;
+    return subscriberNumber.length === BG_PHONE_DIGITS_LENGTH && subscriberNumber[0] !== '0';
   }
 
   function hasMissingRequiredFields() {
@@ -89,7 +90,7 @@ export function RegisterPage() {
     }
 
     if (!validatePhoneNumber()) {
-      setErrorMessage('Телефонният номер трябва да съдържа точно 9 цифри след +359.');
+      setErrorMessage('Телефонният номер трябва да съдържа точно 9 цифри след +359 и първата цифра след +359 не може да бъде 0.');
       return;
     }
 

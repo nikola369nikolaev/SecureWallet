@@ -15,3 +15,7 @@ export function getAdminUserTransactions(userId, accessToken) {
 export function createSupportAccount(payload, accessToken) {
   return postJson('/api/Admin/support-accounts', payload, accessToken);
 }
+
+export function getAdminLogs(accessToken, take = 200) {
+  return getJson(`/api/Admin/logs?take=${take}`, accessToken);
+}

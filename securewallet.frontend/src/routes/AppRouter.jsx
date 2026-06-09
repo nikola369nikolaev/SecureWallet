@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { AdminLogsPage } from '../features/admin/AdminLogsPage';
 import { AdminUserDetailsPage } from '../features/admin/AdminUserDetailsPage';
 import { AdminUsersPage } from '../features/admin/AdminUsersPage';
 import { useAuth } from '../auth/AuthContext';
@@ -55,6 +56,11 @@ function StaffRoute() {
   return hasStaffAccess ? <Outlet /> : <Navigate to="/dashboard" replace />;
 }
 
+function AdminRoute() {
+  const { session } = useAuth();
+  return session?.role === 'Admin' ? <Outlet /> : <Navigate to="/dashboard" replace />;
+}
+
 export function AppRouter() {
   return (
     <BrowserRouter>
@@ -82,6 +88,10 @@ export function AppRouter() {
           <Route element={<StaffRoute />}>
             <Route path="/admin/users" element={<AdminUsersPage />} />
             <Route path="/admin/users/:userId" element={<AdminUserDetailsPage />} />
+          </Route>
+
+          <Route element={<AdminRoute />}>
+            <Route path="/admin/logs" element={<AdminLogsPage />} />
           </Route>
         </Route>
       </Routes>

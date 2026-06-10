@@ -192,6 +192,44 @@ a {
   gap: 0.55rem;
 }
 
+.password-input-wrapper {
+  position: relative;
+}
+
+.password-input-wrapper input {
+  padding-right: 3.8rem;
+}
+
+.password-toggle-button {
+  position: absolute;
+  top: 50%;
+  right: 0.7rem;
+  transform: translateY(-50%);
+  width: 2.45rem;
+  height: 2.45rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--accent-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 1rem;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.password-toggle-button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(249, 115, 22, 0.28);
+  transform: translateY(-50%) scale(1.03);
+}
+
+.password-toggle-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .field-group span {
   color: var(--text-main);
   font-size: 0.95rem;
@@ -405,6 +443,36 @@ a {
   padding: 0.45rem;
 }
 
+.auth-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(5, 8, 14, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.auth-modal-card {
+  width: min(100%, 38rem);
+  padding: 1.5rem;
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(circle at top left, rgba(249, 115, 22, 0.12), transparent 34%),
+    linear-gradient(180deg, rgba(33, 26, 23, 0.98), rgba(20, 24, 35, 0.98));
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.38);
+}
+
+.auth-modal-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 .dashboard-page {
   min-height: 100vh;
   padding: 2rem;
@@ -503,6 +571,127 @@ a {
 .dashboard-summary-meta {
   color: var(--text-muted);
   font-size: 0.92rem;
+}
+
+.dashboard-log-shortcut-card {
+  display: grid;
+  gap: 1rem;
+}
+
+.dashboard-log-shortcut-card--critical {
+  border-color: rgba(251, 113, 133, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(251, 113, 133, 0.04);
+}
+
+.dashboard-log-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.audit-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.audit-entry__text {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-main);
+  font-family: "Cascadia Code", "Consolas", monospace;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.audit-entry--critical {
+  border-color: rgba(251, 113, 133, 0.28);
+  background: rgba(251, 113, 133, 0.1);
+}
+
+.audit-entry--critical .audit-entry__text {
+  color: #ffd5dd;
+}
+
+.audit-entry--action {
+  border-color: rgba(74, 222, 128, 0.2);
+  background: rgba(74, 222, 128, 0.08);
+}
+
+.audit-entry--action .audit-entry__text {
+  color: #dcffe8;
+}
+
+.audit-entry--warning {
+  border-color: rgba(251, 191, 36, 0.24);
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.audit-entry--warning .audit-entry__text {
+  color: #ffecb7;
+}
+
+.audit-entry--http {
+  border-color: rgba(125, 211, 252, 0.16);
+  background: rgba(125, 211, 252, 0.05);
+}
+
+.audit-entry--http .audit-entry__text {
+  color: #d8f4ff;
+}
+
+.audit-entry--neutral {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.audit-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 76px;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.audit-badge--critical {
+  background: rgba(251, 113, 133, 0.16);
+  border-color: rgba(251, 113, 133, 0.32);
+  color: #ffd5dd;
+}
+
+.audit-badge--action {
+  background: rgba(74, 222, 128, 0.16);
+  border-color: rgba(74, 222, 128, 0.32);
+  color: #dcffe8;
+}
+
+.audit-badge--warning {
+  background: rgba(251, 191, 36, 0.15);
+  border-color: rgba(251, 191, 36, 0.28);
+  color: #ffecb7;
+}
+
+.audit-badge--http {
+  background: rgba(125, 211, 252, 0.14);
+  border-color: rgba(125, 211, 252, 0.24);
+  color: #d8f4ff;
+}
+
+.audit-badge--neutral {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #f2ebe3;
 }
 
 .transfer-balance-card {
@@ -829,5 +1018,16 @@ a {
   .transaction-side {
     justify-items: start;
     text-align: left;
+  }
+}
+
+@media (max-width: 720px) {
+  .audit-entry {
+    flex-direction: column;
+  }
+
+  .audit-badge {
+    min-width: 0;
+    width: fit-content;
   }
 }

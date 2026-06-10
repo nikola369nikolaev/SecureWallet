@@ -39,6 +39,7 @@ public class LoginUserHandler
         AuthInputValidator.ValidateRequiredField(command.Password, "Парола");
 
         DateTime now = DateTime.UtcNow;
+        bool solvedCaptchaInCurrentAttempt = false;
         User? user = await _userRepository.GetByEmailAsync(command.Email, cancellationToken);
         if (user is null)
         {
@@ -92,6 +93,8 @@ public class LoginUserHandler
 
                 throw captchaException;
             }
+
+            solvedCaptchaInCurrentAttempt = true;
         }
 
         if (!user.IsActive)
@@ -119,6 +122,11 @@ public class LoginUserHandler
             throw invalidPasswordException;
         }
 
+        if (solvedCaptchaInCurrentAttempt)
+        {
+            await ClearLoginProtectionStateAsync(user, now, cancellationToken);
+        }
+
         if (!user.IsEmailVerified)
         {
             await ClearLoginProtectionStateAsync(user, now, cancellationToken);
@@ -141,9 +149,8 @@ public class LoginUserHandler
         {
             throw new LoginProtectionException(
                 "Нужен е код от authenticator приложението.",
-                requiresCaptcha: user.FailedLoginAttempts >= CaptchaRequiredAttempts,
+                requiresCaptcha: false,
                 requiresTotp: true,
-                captchaImageBase64: CreateCaptchaImageBase64(user.CurrentCaptchaCode),
                 email: user.Email,
                 failureStage: "MissingTotp",
                 failedAttemptCount: user.FailedLoginAttempts);

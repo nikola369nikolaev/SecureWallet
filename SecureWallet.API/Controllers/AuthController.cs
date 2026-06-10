@@ -71,6 +71,7 @@ public class AuthController : ControllerBase
             Username = request.Username,
             Email = request.Email,
             Password = request.Password,
+            ConfirmPassword = request.ConfirmPassword,
             PhoneNumber = request.PhoneNumber,
             FirstName = request.FirstName,
             LastName = request.LastName
@@ -161,16 +162,27 @@ public class AuthController : ControllerBase
         }
         catch (LoginProtectionException exception)
         {
-            _logger.LogWarning(
-                "Вход: защитна проверка за имейл {Email}. Stage={FailureStage}, Attempts={FailedAttemptCount}, Captcha={RequiresCaptcha}, Totp={RequiresTotp}, EmailVerification={RequiresEmailVerification}, LockoutSeconds={LockoutSeconds}, Причина={Reason}",
-                request.Email,
-                exception.FailureStage,
-                exception.FailedAttemptCount,
-                exception.RequiresCaptcha,
-                exception.RequiresTotp,
-                exception.RequiresEmailVerification,
-                exception.LockoutSeconds,
-                exception.Message);
+            if (exception.FailureStage == "InvalidPassword")
+            {
+                _logger.LogWarning(
+                    "Вход: защитна проверка за имейл {Email}; {Reason}; опит номер: {FailedAttemptCount}",
+                    request.Email,
+                    "Грешен имейл или парола.",
+                    exception.FailedAttemptCount);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Вход: защитна проверка за имейл {Email}. Stage={FailureStage}, Attempts={FailedAttemptCount}, Captcha={RequiresCaptcha}, Totp={RequiresTotp}, EmailVerification={RequiresEmailVerification}, LockoutSeconds={LockoutSeconds}, Причина={Reason}",
+                    request.Email,
+                    exception.FailureStage,
+                    exception.FailedAttemptCount,
+                    exception.RequiresCaptcha,
+                    exception.RequiresTotp,
+                    exception.RequiresEmailVerification,
+                    exception.LockoutSeconds,
+                    exception.Message);
+            }
             return BadRequest(new
             {
                 message = exception.Message,
@@ -184,7 +196,17 @@ public class AuthController : ControllerBase
         }
         catch (InvalidOperationException exception)
         {
-            _logger.LogWarning("Вход отказан за имейл {Email}: {Reason}", request.Email, exception.Message);
+            if (exception.Message == "Грешен имейл или парола.")
+            {
+                _logger.LogWarning(
+                    "Вход: защитна проверка за имейл {Email}; {Reason}; опит номер: 0",
+                    request.Email,
+                    exception.Message);
+            }
+            else
+            {
+                _logger.LogWarning("Вход отказан за имейл {Email}: {Reason}", request.Email, exception.Message);
+            }
             return BadRequest(new { message = exception.Message });
         }
     }

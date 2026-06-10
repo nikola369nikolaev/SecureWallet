@@ -30,6 +30,7 @@ export function LoginPage() {
   const [captchaImageBase64, setCaptchaImageBase64] = useState(null);
   const [lockoutSeconds, setLockoutSeconds] = useState(null);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   useEffect(() => {
     const hasExpiredSessionFlag = window.sessionStorage.getItem(SESSION_EXPIRED_KEY) === 'true';
@@ -95,22 +96,23 @@ export function LoginPage() {
         const nextRequiresCaptcha = Boolean(error.payload?.requiresCaptcha);
         const nextRequiresEmailVerification = Boolean(error.payload?.requiresEmailVerification);
         const nextMessage = error.payload?.message ?? error.message;
+        const shouldOpenTotpStep = nextRequiresTotp && !nextRequiresEmailVerification;
         const isTotpStepPrompt = nextRequiresTotp && !formState.totpCode;
 
         if (nextRequiresEmailVerification) {
           setInfoMessage('Имейлът и паролата са приети. Въведи 6-цифрения код от имейла, за да потвърдиш акаунта. Провери и папка Spam, ако не го виждаш.');
           setErrorMessage('');
         } else if (isTotpStepPrompt) {
-          setInfoMessage('Имейлът и паролата са приети. Въведи временния код от authenticator приложението, за да завършиш входа.');
+          setInfoMessage('Имейлът и паролата са приети. Въведи временния код от приложението, за да завършиш входа.');
           setErrorMessage('');
         } else {
           setErrorMessage(nextMessage);
         }
 
         setRequiresEmailVerification(nextRequiresEmailVerification);
-        setRequiresCaptcha(nextRequiresEmailVerification ? false : nextRequiresCaptcha);
+        setRequiresCaptcha(nextRequiresEmailVerification || shouldOpenTotpStep ? false : nextRequiresCaptcha);
         setRequiresTotp(nextRequiresEmailVerification ? false : nextRequiresTotp);
-        setCaptchaImageBase64(nextRequiresEmailVerification ? null : (error.payload?.captchaImageBase64 ?? null));
+        setCaptchaImageBase64(nextRequiresEmailVerification || shouldOpenTotpStep ? null : (error.payload?.captchaImageBase64 ?? null));
         setLockoutSeconds(nextRequiresEmailVerification ? null : (error.payload?.lockoutSeconds ?? null));
         setFormState((current) => ({
           ...current,
@@ -161,7 +163,7 @@ export function LoginPage() {
         <p className="eyebrow">SecureWallet</p>
         <h1>Влез в своя защитен дигитален портфейл.</h1>
         <p className="hero-copy">
-          Тук тестваш входа, captcha защитата, двуфакторния код от authenticator приложението
+          Тук тестваш входа, captcha защитата, временния код от приложението
           и поведението на системата при временен lockout след грешни опити.
         </p>
         <div className="hero-note-grid">
@@ -170,8 +172,8 @@ export function LoginPage() {
             <span>Първо проверяваме имейла, паролата и дали акаунтът вече е потвърдил имейла си.</span>
           </div>
           <div className="hero-note">
-            <strong>Captcha и 2FA</strong>
-            <span>При нужда системата иска captcha и след това временен код от authenticator приложението.</span>
+            <strong>Captcha и двуфакторна защита</strong>
+            <span>При нужда системата иска captcha и след това временен код от приложението.</span>
           </div>
         </div>
       </section>
@@ -198,14 +200,26 @@ export function LoginPage() {
 
           <label className="field-group">
             <span>Парола</span>
-            <input
-              type="password"
-              value={formState.password}
-              onChange={(event) => updateField('password', event.target.value)}
-              placeholder="Въведи паролата"
-              autoComplete="current-password"
-              disabled={requiresEmailVerification}
-            />
+            <div className="password-input-wrapper">
+              <input
+                type={isPasswordVisible ? 'text' : 'password'}
+                value={formState.password}
+                onChange={(event) => updateField('password', event.target.value)}
+                placeholder="Въведи паролата"
+                autoComplete="current-password"
+                disabled={requiresEmailVerification}
+              />
+              <button
+                className="password-toggle-button"
+                type="button"
+                onClick={() => setIsPasswordVisible((current) => !current)}
+                aria-label={isPasswordVisible ? 'Скрий паролата' : 'Покажи паролата'}
+                title={isPasswordVisible ? 'Скрий паролата' : 'Покажи паролата'}
+                disabled={requiresEmailVerification}
+              >
+                👁
+              </button>
+            </div>
           </label>
 
           {requiresEmailVerification && (
@@ -216,7 +230,7 @@ export function LoginPage() {
 
           {requiresTotp && (
             <div className="message-box message-box--info">
-              <strong>Следваща стъпка:</strong> въведи временния 6-цифрен код от authenticator приложението.
+              <strong>Следваща стъпка:</strong> въведи временния 6-цифрен код от приложението.
             </div>
           )}
 
@@ -269,24 +283,9 @@ export function LoginPage() {
           )}
 
           {requiresTotp && (
-            <label className="field-group">
-              <span className="inline-label-with-info">
-                <span>Код от authenticator приложението</span>
-                <span className="info-tooltip-badge" tabIndex={0}>
-                  i
-                  <span className="info-tooltip-content">
-                    Това е временен 6-цифрен код от Google Authenticator, Microsoft Authenticator или друго подобно приложение.
-                  </span>
-                </span>
-              </span>
-              <input
-                type="text"
-                value={formState.totpCode}
-                onChange={(event) => updateField('totpCode', event.target.value)}
-                placeholder="123456"
-                inputMode="numeric"
-              />
-            </label>
+            <div className="message-box message-box--success">
+              Паролата и captcha кодът са приети. Отвори следващата стъпка и въведи временния код от приложението.
+            </div>
           )}
 
           {infoMessage && <div className="message-box message-box--info">{infoMessage}</div>}
@@ -309,6 +308,61 @@ export function LoginPage() {
           <Link to="/reset-password">Забравена парола</Link>
         </div>
       </section>
+
+      {requiresTotp && !requiresEmailVerification && (
+        <div className="auth-modal-backdrop" role="presentation">
+          <section className="auth-modal-card" aria-label="Потвърждение с временен код">
+            <div className="panel-header auth-modal-card__header">
+              <div>
+                <p className="eyebrow">Следваща стъпка</p>
+                <h2>Потвърди входа с временен код</h2>
+                <p>Паролата и captcha кодът са приети. Въведи 6-цифрения код от приложението.</p>
+              </div>
+              <button
+                className="secondary-button secondary-button--compact"
+                type="button"
+                onClick={() => {
+                  setRequiresTotp(false);
+                  updateField('totpCode', '');
+                  setInfoMessage('');
+                }}
+              >
+                Затвори
+              </button>
+            </div>
+
+            <form className="auth-form" onSubmit={handleSubmit}>
+              <label className="field-group">
+                <span className="inline-label-with-info">
+                  <span>Временен код</span>
+                  <span className="info-tooltip-badge" tabIndex={0}>
+                    i
+                    <span className="info-tooltip-content">
+                      Това е временен 6-цифрен код от Google Authenticator, Microsoft Authenticator или друго подобно приложение.
+                    </span>
+                  </span>
+                </span>
+                <input
+                  type="text"
+                  value={formState.totpCode}
+                  onChange={(event) => updateField('totpCode', event.target.value)}
+                  placeholder="123456"
+                  inputMode="numeric"
+                  autoFocus
+                />
+              </label>
+
+              {errorMessage && <div className="message-box message-box--error">{errorMessage}</div>}
+
+              <div className="inline-action-row">
+                <button className="primary-button" type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Потвърждаване...' : 'Потвърди входа'}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
     </main>
   );
 }

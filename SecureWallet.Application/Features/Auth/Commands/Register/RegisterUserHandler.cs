@@ -30,6 +30,14 @@ public class RegisterUserHandler
 
     public async Task<RegisterResultDto> Handle(RegisterUserCommand command, CancellationToken cancellationToken = default)
     {
+        AuthInputValidator.ValidateRequiredField(command.Password, "Парола");
+        AuthInputValidator.ValidateRequiredField(command.ConfirmPassword, "Потвърждение на паролата");
+
+        if (command.Password != command.ConfirmPassword)
+        {
+            throw new InvalidOperationException("Паролите не съвпадат.");
+        }
+
         IReadOnlyCollection<string> validationErrors = PasswordValidator.Validate(command.Password);
 
         if (validationErrors.Count > 0)
@@ -40,7 +48,6 @@ public class RegisterUserHandler
         AuthInputValidator.ValidateEmail(command.Email);
         AuthInputValidator.ValidateUsername(command.Username);
         AuthInputValidator.ValidatePhoneNumber(command.PhoneNumber);
-        AuthInputValidator.ValidateRequiredField(command.Password, "Парола");
         AuthInputValidator.ValidatePersonName(command.FirstName ?? string.Empty, "Собственото име");
         AuthInputValidator.ValidatePersonName(command.LastName ?? string.Empty, "Фамилията");
 

@@ -12,6 +12,7 @@ export function RegisterPage() {
     username: '',
     email: '',
     password: '',
+    confirmPassword: '',
     phoneNumber: '+359',
     firstName: '',
     lastName: '',
@@ -19,6 +20,8 @@ export function RegisterPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPasswordInfoOpen, setIsPasswordInfoOpen] = useState(false);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
 
   function updateField(field, value) {
     setFormState((current) => ({
@@ -75,6 +78,7 @@ export function RegisterPage() {
       formState.username.trim() === '' ||
       formState.email.trim() === '' ||
       formState.password.trim() === '' ||
+      formState.confirmPassword.trim() === '' ||
       formState.firstName.trim() === '' ||
       formState.lastName.trim() === ''
     );
@@ -91,6 +95,11 @@ export function RegisterPage() {
 
     if (!validatePhoneNumber()) {
       setErrorMessage('Телефонният номер трябва да съдържа точно 9 цифри след +359 и първата цифра след +359 не може да бъде 0.');
+      return;
+    }
+
+    if (formState.password !== formState.confirmPassword) {
+      setErrorMessage('Паролите не съвпадат.');
       return;
     }
 
@@ -141,7 +150,20 @@ export function RegisterPage() {
         <div className="panel-header">
           <p className="eyebrow">Регистрация</p>
           <h2>Създай акаунт</h2>
-          <p>Попълни данните внимателно. След това ще потвърдим имейла и ще настроиш TOTP.</p>
+          <p>
+            Попълни данните внимателно. След това ще потвърдим имейла и ще настроиш
+            {' '}
+            <span className="inline-label-with-info">
+              <span>временен код</span>
+              <span className="info-tooltip-badge" tabIndex={0}>
+                i
+                <span className="info-tooltip-content">
+                  Това е временен 6-цифрен код от Google Authenticator, Microsoft Authenticator или друго подобно приложение.
+                </span>
+              </span>
+            </span>
+            .
+          </p>
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
@@ -183,11 +205,41 @@ export function RegisterPage() {
                   </span>
                 </span>
               </span>
-              <input
-                type="password"
-                value={formState.password}
-                onChange={(event) => updateField('password', event.target.value)}
-              />
+              <div className="password-input-wrapper">
+                <input
+                  type={isPasswordVisible ? 'text' : 'password'}
+                  value={formState.password}
+                  onChange={(event) => updateField('password', event.target.value)}
+                />
+                <button
+                  className="password-toggle-button"
+                  type="button"
+                  onClick={() => setIsPasswordVisible((current) => !current)}
+                  aria-label={isPasswordVisible ? 'Скрий паролата' : 'Покажи паролата'}
+                  title={isPasswordVisible ? 'Скрий паролата' : 'Покажи паролата'}
+                >
+                  👁
+                </button>
+              </div>
+            </label>
+            <label className="field-group">
+              <span>Потвърди парола</span>
+              <div className="password-input-wrapper">
+                <input
+                  type={isConfirmPasswordVisible ? 'text' : 'password'}
+                  value={formState.confirmPassword}
+                  onChange={(event) => updateField('confirmPassword', event.target.value)}
+                />
+                <button
+                  className="password-toggle-button"
+                  type="button"
+                  onClick={() => setIsConfirmPasswordVisible((current) => !current)}
+                  aria-label={isConfirmPasswordVisible ? 'Скрий потвърдената парола' : 'Покажи потвърдената парола'}
+                  title={isConfirmPasswordVisible ? 'Скрий потвърдената парола' : 'Покажи потвърдената парола'}
+                >
+                  👁
+                </button>
+              </div>
             </label>
             <label className="field-group">
               <span>Телефон</span>

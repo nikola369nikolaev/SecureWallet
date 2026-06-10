@@ -66,9 +66,6 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(user => user.PendingTotpSecret)
             .HasMaxLength(128);
 
-        builder.Property(user => user.RefreshTokenHash)
-            .HasMaxLength(512);
-
         builder.Property(user => user.CreatedAtUtc)
             .IsRequired();
 

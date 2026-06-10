@@ -1,4 +1,4 @@
-using FluentValidation;
+﻿using FluentValidation;
 using SecureWallet.Application.Features.Auth.DTOs;
 using SecureWallet.Application.Interfaces.Repositories;
 using SecureWallet.Application.Interfaces.Security;
@@ -31,7 +31,6 @@ public class ResetPasswordHandler
         await _validator.ValidateAndThrowInvalidOperationAsync(command, cancellationToken);
 
         User? user = await _userRepository.GetByPasswordResetSessionTokenAsync(command.ResetSessionToken, cancellationToken);
-
         if (user is null)
         {
             throw new InvalidOperationException("Сесията за смяна на паролата е невалидна.");
@@ -63,8 +62,6 @@ public class ResetPasswordHandler
             Message = "Паролата е сменена. Продължи с новата настройка на временния код.",
             AccessToken = tokens.AccessToken,
             ExpiresAtUtc = tokens.AccessTokenExpiresAtUtc,
-            RefreshToken = tokens.RefreshToken,
-            RefreshTokenExpiresAtUtc = tokens.RefreshTokenExpiresAtUtc,
             UserId = user.Id,
             Username = user.Username,
             Email = user.Email,

@@ -1,14 +1,10 @@
-namespace SecureWallet.Application.Features.Auth.DTOs;
+﻿namespace SecureWallet.Application.Features.Auth.DTOs;
 
 public class RefreshSessionResultDto
 {
     public string AccessToken { get; set; } = string.Empty;
 
     public DateTime ExpiresAtUtc { get; set; }
-
-    public string RefreshToken { get; set; } = string.Empty;
-
-    public DateTime RefreshTokenExpiresAtUtc { get; set; }
 
     public Guid UserId { get; set; }
 

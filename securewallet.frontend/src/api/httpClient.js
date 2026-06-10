@@ -1,11 +1,8 @@
 ﻿import {
   clearStoredSession,
-  createSessionFromAuthResult,
   isAccessTokenExpired,
-  isRefreshTokenExpired,
   loadStoredSession,
   markSessionExpired,
-  saveStoredSession,
 } from '../auth/sessionStorage';
 
 export class ApiError extends Error {
@@ -17,7 +14,12 @@ export class ApiError extends Error {
   }
 }
 
-let refreshRequestPromise = null;
+let sessionRenewalHandler = null;
+let sessionRenewalPromise = null;
+
+export function configureSessionRenewal(handler) {
+  sessionRenewalHandler = handler;
+}
 
 function createHeaders(accessToken, contentType = 'application/json') {
   const headers = {};
@@ -57,6 +59,44 @@ async function sendRequest(url, method, payload, accessToken = null) {
   return { response, body };
 }
 
+function handleExpiredSession() {
+  markSessionExpired();
+  clearStoredSession();
+}
+
+async function renewStoredSession(currentSession) {
+  if (sessionRenewalPromise) {
+    return sessionRenewalPromise;
+  }
+
+  if (!currentSession?.accessToken || !currentSession.twoFactorEnabled || !sessionRenewalHandler) {
+    handleExpiredSession();
+    throw new ApiError('Сесията изтече. Моля влез отново.', 401, { message: 'Сесията изтече. Моля влез отново.' });
+  }
+
+  sessionRenewalPromise = (async () => {
+    try {
+      const renewedSession = await sessionRenewalHandler(currentSession);
+      if (!renewedSession?.accessToken) {
+        throw new ApiError('Сесията изтече. Моля влез отново.', 401, { message: 'Сесията изтече. Моля влез отново.' });
+      }
+
+      return renewedSession;
+    } catch (error) {
+      handleExpiredSession();
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
+      throw new ApiError('Сесията изтече. Моля влез отново.', 401, { message: 'Сесията изтече. Моля влез отново.' });
+    } finally {
+      sessionRenewalPromise = null;
+    }
+  })();
+
+  return sessionRenewalPromise;
+}
+
 async function getValidAccessToken(accessToken) {
   if (!accessToken) {
     return null;
@@ -71,44 +111,8 @@ async function getValidAccessToken(accessToken) {
     return accessToken;
   }
 
-  const refreshedSession = await refreshStoredSession();
-  return refreshedSession.accessToken;
-}
-
-async function refreshStoredSession() {
-  if (refreshRequestPromise) {
-    return refreshRequestPromise;
-  }
-
-  const currentSession = loadStoredSession();
-  if (!currentSession?.refreshToken || isRefreshTokenExpired(currentSession)) {
-    markSessionExpired();
-    clearStoredSession();
-    throw new ApiError('Сесията изтече. Моля влез отново.', 401, { message: 'Сесията изтече. Моля влез отново.' });
-  }
-
-  refreshRequestPromise = (async () => {
-    const { response, body } = await sendRequest('/api/Auth/refresh', 'POST', {
-      userId: currentSession.userId,
-      refreshToken: currentSession.refreshToken,
-    });
-
-    if (!response.ok) {
-      markSessionExpired();
-      clearStoredSession();
-      throw new ApiError('Сесията изтече. Моля влез отново.', 401, body);
-    }
-
-    const refreshedSession = createSessionFromAuthResult(body);
-    saveStoredSession(refreshedSession);
-    return refreshedSession;
-  })();
-
-  try {
-    return await refreshRequestPromise;
-  } finally {
-    refreshRequestPromise = null;
-  }
+  const renewedSession = await renewStoredSession(storedSession);
+  return renewedSession.accessToken;
 }
 
 async function requestJson(url, method, payload, accessToken = null) {
@@ -116,8 +120,9 @@ async function requestJson(url, method, payload, accessToken = null) {
   let { response, body } = await sendRequest(url, method, payload, resolvedAccessToken);
 
   if (response.status === 401 && resolvedAccessToken) {
-    const refreshedSession = await refreshStoredSession();
-    resolvedAccessToken = refreshedSession.accessToken;
+    const storedSession = loadStoredSession();
+    const renewedSession = await renewStoredSession(storedSession ?? { accessToken: resolvedAccessToken, twoFactorEnabled: true });
+    resolvedAccessToken = renewedSession.accessToken;
     ({ response, body } = await sendRequest(url, method, payload, resolvedAccessToken));
   }
 

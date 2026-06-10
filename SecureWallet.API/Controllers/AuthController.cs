@@ -220,19 +220,19 @@ public class AuthController : ControllerBase
     {
         RefreshSessionCommand command = new()
         {
-            UserId = request.UserId,
-            RefreshToken = request.RefreshToken
+            ExpiredAccessToken = request.ExpiredAccessToken,
+            TotpCode = request.TotpCode
         };
 
         try
         {
             RefreshSessionResultDto result = await _refreshSessionHandler.Handle(command, cancellationToken);
-            _logger.LogInformation("Сесия: достъпът беше подновен за потребител {UserId}.", request.UserId);
+            _logger.LogInformation("Сесия: достъпът беше подновен за потребител {UserId}.", result.UserId);
             return Ok(result);
         }
         catch (InvalidOperationException exception)
         {
-            _logger.LogWarning("Сесия: неуспешно подновяване за потребител {UserId}: {Reason}", request.UserId, exception.Message);
+            _logger.LogWarning("Сесия: неуспешно подновяване чрез временен код: {Reason}", exception.Message);
             return BadRequest(new { message = exception.Message });
         }
     }

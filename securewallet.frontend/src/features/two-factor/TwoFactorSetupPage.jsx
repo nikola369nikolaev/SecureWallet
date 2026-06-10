@@ -226,7 +226,7 @@ export function TwoFactorSetupPage() {
           <article className="dashboard-card totp-card">
             <h2>Двуфакторната защита вече е включена</h2>
             <p className="dashboard-copy">
-              Въведи текущия временен код от приложението, ако искаш да изключиш двуфакторната защита или да подготвиш нов QR код за същия акаунт.
+              Въведи текущия временен код от Microsoft/Google Authenticator приложението, ако искаш да изключиш двуфакторната защита или да подготвиш нов QR код за същия акаунт.
             </p>
 
             <label className="field-group">

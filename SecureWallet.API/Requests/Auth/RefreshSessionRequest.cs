@@ -2,7 +2,7 @@ namespace SecureWallet.API.Requests.Auth;
 
 public class RefreshSessionRequest
 {
-    public Guid UserId { get; set; }
+    public string ExpiredAccessToken { get; set; } = string.Empty;
 
-    public string RefreshToken { get; set; } = string.Empty;
+    public string TotpCode { get; set; } = string.Empty;
 }

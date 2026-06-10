@@ -1,4 +1,4 @@
-using FluentValidation;
+﻿using FluentValidation;
 using SecureWallet.Application.Features.Auth.DTOs;
 using SecureWallet.Application.Interfaces.Repositories;
 using SecureWallet.Application.Interfaces.Security;
@@ -69,8 +69,6 @@ public class VerifyEmailCodeHandler
             Message = "Имейлът е потвърден. Продължи с настройката на временния код.",
             AccessToken = tokens.AccessToken,
             ExpiresAtUtc = tokens.AccessTokenExpiresAtUtc,
-            RefreshToken = tokens.RefreshToken,
-            RefreshTokenExpiresAtUtc = tokens.RefreshTokenExpiresAtUtc,
             UserId = user.Id,
             Username = user.Username,
             Email = user.Email,

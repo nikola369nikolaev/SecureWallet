@@ -103,7 +103,7 @@ export function LoginPage() {
           setInfoMessage('Имейлът и паролата са приети. Въведи 6-цифрения код от имейла, за да потвърдиш акаунта. Провери и папка Spam, ако не го виждаш.');
           setErrorMessage('');
         } else if (isTotpStepPrompt) {
-          setInfoMessage('Имейлът и паролата са приети. Въведи временния код от приложението, за да завършиш входа.');
+          setInfoMessage('Имейлът и паролата са приети. Въведи временния код от Microsoft/Google Authenticator приложението, за да завършиш входа.');
           setErrorMessage('');
         } else {
           setErrorMessage(nextMessage);
@@ -163,7 +163,7 @@ export function LoginPage() {
         <p className="eyebrow">SecureWallet</p>
         <h1>Влез в своя защитен дигитален портфейл.</h1>
         <p className="hero-copy">
-          Тук тестваш входа, captcha защитата, временния код от приложението
+          Тук тестваш входа, captcha защитата, временния код от Microsoft/Google Authenticator приложението
           и поведението на системата при временен lockout след грешни опити.
         </p>
         <div className="hero-note-grid">
@@ -173,7 +173,7 @@ export function LoginPage() {
           </div>
           <div className="hero-note">
             <strong>Captcha и двуфакторна защита</strong>
-            <span>При нужда системата иска captcha и след това временен код от приложението.</span>
+            <span>При нужда системата иска captcha и след това временен код от Microsoft/Google Authenticator приложението.</span>
           </div>
         </div>
       </section>
@@ -230,7 +230,7 @@ export function LoginPage() {
 
           {requiresTotp && (
             <div className="message-box message-box--info">
-              <strong>Следваща стъпка:</strong> въведи временния 6-цифрен код от приложението.
+              <strong>Следваща стъпка:</strong> въведи временния 6-цифрен код от Microsoft/Google Authenticator приложението.
             </div>
           )}
 
@@ -284,7 +284,7 @@ export function LoginPage() {
 
           {requiresTotp && (
             <div className="message-box message-box--success">
-              Паролата и captcha кодът са приети. Отвори следващата стъпка и въведи временния код от приложението.
+              Паролата и captcha кодът са приети. Отвори следващата стъпка и въведи временния код от Microsoft/Google Authenticator приложението.
             </div>
           )}
 
@@ -316,7 +316,7 @@ export function LoginPage() {
               <div>
                 <p className="eyebrow">Следваща стъпка</p>
                 <h2>Потвърди входа с временен код</h2>
-                <p>Паролата и captcha кодът са приети. Въведи 6-цифрения код от приложението.</p>
+                <p>Паролата и captcha кодът са приети. Въведи 6-цифрения код от Microsoft/Google Authenticator приложението.</p>
               </div>
               <button
                 className="secondary-button secondary-button--compact"

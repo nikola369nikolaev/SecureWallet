@@ -1,4 +1,4 @@
-using FluentValidation;
+﻿using FluentValidation;
 using SecureWallet.Application.Features.Auth.DTOs;
 using SecureWallet.Application.Features.Auth.Exceptions;
 using SecureWallet.Application.Interfaces.Repositories;
@@ -151,7 +151,7 @@ public class LoginUserHandler
         if (string.IsNullOrWhiteSpace(command.TotpCode))
         {
             throw new LoginProtectionException(
-                "Нужен е код от authenticator приложението.",
+                "Нужен е код от Microsoft/Google Authenticator приложението.",
                 requiresCaptcha: false,
                 requiresTotp: true,
                 email: user.Email,
@@ -167,7 +167,7 @@ public class LoginUserHandler
             LoginProtectionException invalidTotpException = await RegisterFailedAttemptAsync(
                 user,
                 now,
-                "Кодът от authenticator приложението е грешен.",
+                "Временният код от Microsoft/Google Authenticator приложението е грешен.",
                 cancellationToken,
                 "InvalidTotp",
                 true);
@@ -190,8 +190,6 @@ public class LoginUserHandler
         {
             AccessToken = tokens.AccessToken,
             ExpiresAtUtc = tokens.AccessTokenExpiresAtUtc,
-            RefreshToken = tokens.RefreshToken,
-            RefreshTokenExpiresAtUtc = tokens.RefreshTokenExpiresAtUtc,
             UserId = user.Id,
             Username = user.Username,
             Email = user.Email,

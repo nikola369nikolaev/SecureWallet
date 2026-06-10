@@ -1,4 +1,5 @@
-﻿using SecureWallet.Domain.Entities;
+using System.Security.Claims;
+using SecureWallet.Domain.Entities;
 
 namespace SecureWallet.Application.Interfaces.Security;
 
@@ -8,7 +9,5 @@ public interface IJwtTokenService
 
     DateTime GetAccessTokenExpiresAtUtc();
 
-    string GenerateRefreshToken();
-
-    DateTime GetRefreshTokenExpiresAtUtc();
+    ClaimsPrincipal? GetPrincipalFromExpiredAccessToken(string expiredAccessToken);
 }

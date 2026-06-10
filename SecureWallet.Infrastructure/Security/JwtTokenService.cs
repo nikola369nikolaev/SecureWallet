@@ -1,6 +1,5 @@
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -12,7 +11,6 @@ namespace SecureWallet.Infrastructure.Security;
 
 public class JwtTokenService : IJwtTokenService
 {
-    private const int DefaultRefreshTokenExpirationDays = 7;
     private readonly IConfiguration _configuration;
 
     public JwtTokenService(IConfiguration configuration)
@@ -22,18 +20,52 @@ public class JwtTokenService : IJwtTokenService
 
     public string GenerateAccessToken(User user, bool securitySetupRequired = false)
     {
-        string key = _configuration["Jwt:Key"]
-            ?? throw new InvalidOperationException("JWT key was not found.");
+        JwtSecurityTokenHandler tokenHandler = new();
+        SecurityToken securityToken = tokenHandler.CreateToken(BuildTokenDescriptor(user, securitySetupRequired));
+        return tokenHandler.WriteToken(securityToken);
+    }
 
-        string issuer = _configuration["Jwt:Issuer"]
-            ?? throw new InvalidOperationException("JWT issuer was not found.");
+    public DateTime GetAccessTokenExpiresAtUtc()
+    {
+        return DateTime.UtcNow.AddMinutes(GetAccessTokenExpirationMinutes());
+    }
 
-        string audience = _configuration["Jwt:Audience"]
-            ?? throw new InvalidOperationException("JWT audience was not found.");
+    public ClaimsPrincipal? GetPrincipalFromExpiredAccessToken(string expiredAccessToken)
+    {
+        if (string.IsNullOrWhiteSpace(expiredAccessToken))
+        {
+            return null;
+        }
 
+        JwtSecurityTokenHandler tokenHandler = new();
+
+        TokenValidationParameters validationParameters = BuildValidationParameters();
+        validationParameters.ValidateLifetime = false;
+
+        try
+        {
+            ClaimsPrincipal principal = tokenHandler.ValidateToken(expiredAccessToken, validationParameters, out SecurityToken validatedToken);
+
+            if (validatedToken is not JwtSecurityToken jwtToken ||
+                !jwtToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            return principal;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private SecurityTokenDescriptor BuildTokenDescriptor(User user, bool securitySetupRequired)
+    {
         List<Claim> claims = new()
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Email, user.Email),
             new(JwtRegisteredClaimNames.UniqueName, user.Username),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
@@ -45,65 +77,62 @@ public class JwtTokenService : IJwtTokenService
             claims.Add(new Claim(ClaimTypes.Role, user.Role.Name));
         }
 
-        SymmetricSecurityKey signingKey = new(Encoding.UTF8.GetBytes(key));
+        SymmetricSecurityKey signingKey = new(Encoding.UTF8.GetBytes(GetJwtKey()));
         SigningCredentials signingCredentials = new(signingKey, SecurityAlgorithms.HmacSha256);
 
-        SecurityTokenDescriptor tokenDescriptor = new()
+        return new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
             Expires = GetAccessTokenExpiresAtUtc(),
-            Issuer = issuer,
-            Audience = audience,
+            Issuer = GetJwtIssuer(),
+            Audience = GetJwtAudience(),
             SigningCredentials = signingCredentials
         };
-
-        JwtSecurityTokenHandler tokenHandler = new();
-        SecurityToken securityToken = tokenHandler.CreateToken(tokenDescriptor);
-
-        return tokenHandler.WriteToken(securityToken);
     }
 
-    public DateTime GetAccessTokenExpiresAtUtc()
+    private TokenValidationParameters BuildValidationParameters()
     {
-        return DateTime.UtcNow.AddMinutes(GetAccessTokenExpirationMinutes());
-    }
-
-    public string GenerateRefreshToken()
-    {
-        return Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
-    }
-
-    public DateTime GetRefreshTokenExpiresAtUtc()
-    {
-        return DateTime.UtcNow.AddDays(GetRefreshTokenExpirationDays());
+        return new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = GetJwtIssuer(),
+            ValidateAudience = true,
+            ValidAudience = GetJwtAudience(),
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(GetJwtKey())),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
+        };
     }
 
     private int GetAccessTokenExpirationMinutes()
     {
         string expirationMinutesValue = _configuration["Jwt:AccessTokenExpirationMinutes"]
-            ?? throw new InvalidOperationException("JWT access token expiration was not found.");
+            ?? throw new InvalidOperationException("Не е намерена настройка за живота на JWT сесията.");
 
         if (!int.TryParse(expirationMinutesValue, out int expirationMinutes))
         {
-            throw new InvalidOperationException("JWT access token expiration is invalid.");
+            throw new InvalidOperationException("Стойността за живота на JWT сесията е невалидна.");
         }
 
         return expirationMinutes;
     }
 
-    private int GetRefreshTokenExpirationDays()
+    private string GetJwtKey()
     {
-        string? expirationDaysValue = _configuration["Jwt:RefreshTokenExpirationDays"];
-        if (string.IsNullOrWhiteSpace(expirationDaysValue))
-        {
-            return DefaultRefreshTokenExpirationDays;
-        }
+        return _configuration["Jwt:Key"]
+            ?? throw new InvalidOperationException("Не е намерен ключът за JWT.");
+    }
 
-        if (!int.TryParse(expirationDaysValue, out int expirationDays))
-        {
-            throw new InvalidOperationException("JWT refresh token expiration is invalid.");
-        }
+    private string GetJwtIssuer()
+    {
+        return _configuration["Jwt:Issuer"]
+            ?? throw new InvalidOperationException("Не е намерен issuer-ът за JWT.");
+    }
 
-        return expirationDays;
+    private string GetJwtAudience()
+    {
+        return _configuration["Jwt:Audience"]
+            ?? throw new InvalidOperationException("Не е намерена audience стойността за JWT.");
     }
 }

@@ -25,14 +25,6 @@ export function isAccessTokenExpired(session) {
   return isUtcDateExpired(session?.expiresAtUtc);
 }
 
-export function isRefreshTokenExpired(session) {
-  if (!session?.refreshToken) {
-    return true;
-  }
-
-  return isUtcDateExpired(session?.refreshTokenExpiresAtUtc);
-}
-
 export function loadStoredSession() {
   try {
     const rawValue = window.localStorage.getItem(STORAGE_KEY);
@@ -40,14 +32,7 @@ export function loadStoredSession() {
       return null;
     }
 
-    const parsedValue = JSON.parse(rawValue);
-    if (isRefreshTokenExpired(parsedValue)) {
-      markSessionExpired();
-      clearStoredSession();
-      return null;
-    }
-
-    return parsedValue;
+    return JSON.parse(rawValue);
   } catch {
     return null;
   }
@@ -57,8 +42,6 @@ export function createSessionFromAuthResult(result) {
   return {
     accessToken: result.accessToken,
     expiresAtUtc: result.expiresAtUtc,
-    refreshToken: result.refreshToken,
-    refreshTokenExpiresAtUtc: result.refreshTokenExpiresAtUtc,
     userId: result.userId,
     username: result.username,
     email: result.email,

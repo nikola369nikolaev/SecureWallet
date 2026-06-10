@@ -58,7 +58,7 @@ export function TwoFactorSetupPage() {
           return;
         }
 
-        setErrorMessage(error instanceof ApiError ? error.message : 'Възникна грешка при подготовка на настройката за временен код.');
+        setErrorMessage(error instanceof ApiError ? error.message : 'Възникна проблем при подготовка на настройката за временния код. Опитай отново.');
       } finally {
         if (isActive) {
           setIsLoading(false);
@@ -110,7 +110,7 @@ export function TwoFactorSetupPage() {
       if (error instanceof ApiError) {
         setErrorMessage(error.payload?.message ?? error.message);
       } else {
-        setErrorMessage('Възникна неочаквана грешка при потвърждаване на временния код.');
+        setErrorMessage('Възникна проблем при потвърждаване на временния код. Опитай отново.');
       }
     } finally {
       setIsVerifying(false);
@@ -137,7 +137,7 @@ export function TwoFactorSetupPage() {
       if (error instanceof ApiError) {
         setErrorMessage(error.payload?.message ?? error.message);
       } else {
-        setErrorMessage('Възникна неочаквана грешка при изключване на двуфакторната защита.');
+        setErrorMessage('Възникна проблем при изключване на двуфакторната защита. Опитай отново.');
       }
     } finally {
       setIsDisabling(false);
@@ -160,7 +160,7 @@ export function TwoFactorSetupPage() {
       if (error instanceof ApiError) {
         setErrorMessage(error.payload?.message ?? error.message);
       } else {
-        setErrorMessage('Възникна неочаквана грешка при подмяна на настройката на двуфакторната защита.');
+        setErrorMessage('Възникна проблем при подмяна на настройката на двуфакторната защита. Опитай отново.');
       }
     } finally {
       setIsResetting(false);

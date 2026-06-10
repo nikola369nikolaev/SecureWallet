@@ -118,7 +118,7 @@ export function RegisterPage() {
       if (error instanceof ApiError) {
         setErrorMessage(error.payload?.message ?? error.message);
       } else {
-        setErrorMessage('Възникна неочаквана грешка при регистрация.');
+        setErrorMessage('Възникна проблем при регистрацията. Опитай отново.');
       }
     } finally {
       setIsSubmitting(false);

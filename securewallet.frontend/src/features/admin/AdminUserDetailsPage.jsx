@@ -92,7 +92,7 @@ export function AdminUserDetailsPage() {
           return;
         }
 
-        setErrorMessage(error instanceof ApiError ? error.message : 'Възникна грешка при зареждане на потребителските детайли.');
+        setErrorMessage(error instanceof ApiError ? error.message : 'Възникна проблем при зареждане на потребителските детайли. Опитай отново.');
       } finally {
         if (isActive) {
           setIsLoading(false);

@@ -125,8 +125,8 @@ export function LoginPage() {
       } else {
         setErrorMessage(
           requiresEmailVerification
-            ? 'Възникна неочаквана грешка при потвърждаване на имейла.'
-            : 'Възникна неочаквана грешка при вход.',
+            ? 'Възникна проблем при потвърждаване на имейла. Опитай отново.'
+            : 'Възникна проблем при вход. Опитай отново.',
         );
       }
     } finally {
@@ -150,7 +150,7 @@ export function LoginPage() {
       if (error instanceof ApiError) {
         setErrorMessage(error.payload?.message ?? error.message);
       } else {
-        setErrorMessage('Възникна неочаквана грешка при изпращане на нов код.');
+        setErrorMessage('Възникна проблем при изпращане на нов код. Опитай отново.');
       }
     } finally {
       setIsResending(false);

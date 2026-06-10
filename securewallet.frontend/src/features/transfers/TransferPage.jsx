@@ -88,7 +88,7 @@ export function TransferPage() {
           return;
         }
 
-        setErrorMessage(error instanceof ApiError ? error.message : 'Възникна грешка при зареждане на баланса.');
+        setErrorMessage(error instanceof ApiError ? error.message : 'Възникна проблем при зареждане на баланса. Опитай отново.');
       } finally {
         if (isActive) {
           setIsLoading(false);
@@ -202,7 +202,7 @@ export function TransferPage() {
 
         setErrorMessage(error.payload?.message ?? error.message);
       } else {
-        setErrorMessage('Възникна неочаквана грешка при изпращане на превода.');
+        setErrorMessage('Възникна проблем при изпращане на превода. Опитай отново.');
       }
     } finally {
       setIsSubmitting(false);

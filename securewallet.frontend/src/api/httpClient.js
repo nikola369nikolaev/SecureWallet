@@ -41,7 +41,7 @@ async function readResponseBody(response) {
 
 function ensureSuccess(response, body) {
   if (!response.ok) {
-    const message = body?.message ?? `Request failed with status ${response.status}.`;
+    const message = body?.message ?? 'Възникна проблем при заявката. Опитай отново.';
     throw new ApiError(message, response.status, body);
   }
 }

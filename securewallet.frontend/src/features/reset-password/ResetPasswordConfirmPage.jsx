@@ -95,7 +95,7 @@ export function ResetPasswordConfirmPage() {
       if (error instanceof ApiError) {
         setErrorMessage(error.payload?.message ?? error.message);
       } else {
-        setErrorMessage('Възникна неочаквана грешка при смяна на паролата.');
+        setErrorMessage('Възникна проблем при смяна на паролата. Опитай отново.');
       }
     } finally {
       setIsSubmitting(false);

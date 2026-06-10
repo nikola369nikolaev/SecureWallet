@@ -373,7 +373,7 @@ export function DashboardPage() {
         return;
       }
 
-      setErrorMessage(error instanceof ApiError ? error.message : 'Възникна грешка при зареждане на портфейла.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Възникна проблем при зареждане на портфейла. Опитай отново.');
     } finally {
       setIsLoading(false);
     }
@@ -416,7 +416,7 @@ export function DashboardPage() {
         return;
       }
 
-      setDepositErrorMessage(error instanceof ApiError ? error.message : 'Възникна грешка при депозита.');
+      setDepositErrorMessage(error instanceof ApiError ? error.message : 'Възникна проблем при депозита. Опитай отново.');
     } finally {
       setIsDepositing(false);
     }

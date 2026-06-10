@@ -43,7 +43,7 @@ export function ResetPasswordPage() {
       if (error instanceof ApiError) {
         setErrorMessage(error.payload?.message ?? error.message);
       } else {
-        setErrorMessage('Възникна неочаквана грешка при изпращане на SMS кода.');
+        setErrorMessage('Възникна проблем при изпращане на SMS кода. Опитай отново.');
       }
     } finally {
       setIsSendingCode(false);
@@ -76,7 +76,7 @@ export function ResetPasswordPage() {
       if (error instanceof ApiError) {
         setErrorMessage(error.payload?.message ?? error.message);
       } else {
-        setErrorMessage('Възникна неочаквана грешка при проверка на SMS кода.');
+        setErrorMessage('Възникна проблем при проверка на SMS кода. Опитай отново.');
       }
     } finally {
       setIsVerifyingCode(false);
@@ -146,7 +146,7 @@ export function ResetPasswordPage() {
               <span className="info-tooltip-badge" tabIndex={0} aria-label="Подсказка за кода">
                 i
                 <span className="info-tooltip-content">
-                  Тук въведи еднократния код, който получи по SMS. Това не е код от authenticator приложението.
+                  Тук въведи еднократния код, който получи по SMS. Това не е код от Microsoft/Google Authenticator приложението.
                 </span>
               </span>
             </span>

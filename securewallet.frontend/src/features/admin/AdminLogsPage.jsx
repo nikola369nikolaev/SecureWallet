@@ -213,7 +213,7 @@ export function AdminLogsPage() {
           return;
         }
 
-        setErrorMessage(error instanceof ApiError ? error.message : 'Възникна грешка при зареждане на логовете.');
+        setErrorMessage(error instanceof ApiError ? error.message : 'Възникна проблем при зареждане на логовете. Опитай отново.');
       } finally {
         if (isActive) {
           setIsLoading(false);
@@ -249,7 +249,7 @@ export function AdminLogsPage() {
         return;
       }
 
-      setErrorMessage(error instanceof ApiError ? error.message : 'Възникна грешка при обновяване на логовете.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Възникна проблем при обновяване на логовете. Опитай отново.');
     } finally {
       setIsLoading(false);
     }

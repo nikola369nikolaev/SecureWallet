@@ -111,7 +111,7 @@ export function AdminUsersPage() {
           return;
         }
 
-        setErrorMessage(error instanceof ApiError ? error.message : 'Възникна грешка при зареждане на потребителите.');
+        setErrorMessage(error instanceof ApiError ? error.message : 'Възникна проблем при зареждане на потребителите. Опитай отново.');
       } finally {
         if (isActive) {
           setIsLoading(false);
@@ -172,7 +172,7 @@ export function AdminUsersPage() {
       setUsers(refreshedUsers);
       setForm(initialSupportForm);
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : 'Възникна грешка при създаване на акаунта на служител support.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Възникна проблем при създаване на акаунта на служител support. Опитай отново.');
     } finally {
       setIsCreating(false);
     }

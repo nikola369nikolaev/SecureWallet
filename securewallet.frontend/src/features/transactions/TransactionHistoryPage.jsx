@@ -146,7 +146,7 @@ export function TransactionHistoryPage() {
         return;
       }
 
-      setErrorMessage(error instanceof ApiError ? error.message : 'Възникна грешка при зареждане на историята.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Възникна проблем при зареждане на историята. Опитай отново.');
     } finally {
       setIsLoading(false);
       setIsLoadingMore(false);
@@ -189,7 +189,7 @@ export function TransactionHistoryPage() {
         return;
       }
 
-      setErrorMessage(error instanceof ApiError ? error.message : 'Възникна грешка при зареждане на административната история.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Възникна проблем при зареждане на административната история. Опитай отново.');
     } finally {
       setIsLoading(false);
       setIsLoadingMore(false);

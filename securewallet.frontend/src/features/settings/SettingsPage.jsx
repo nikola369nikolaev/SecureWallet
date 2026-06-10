@@ -88,7 +88,7 @@ export function SettingsPage() {
           return;
         }
 
-        setErrorMessage(error instanceof ApiError ? error.message : 'Възникна грешка при зареждане на настройките.');
+        setErrorMessage(error instanceof ApiError ? error.message : 'Възникна проблем при зареждане на настройките. Опитай отново.');
       } finally {
         if (isActive) {
           setIsLoading(false);

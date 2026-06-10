@@ -56,7 +56,7 @@ export function VerifyEmailPage() {
       if (error instanceof ApiError) {
         setErrorMessage(error.payload?.message ?? error.message);
       } else {
-        setErrorMessage('Възникна неочаквана грешка при потвърждаване на имейла.');
+        setErrorMessage('Възникна проблем при потвърждаване на имейла. Опитай отново.');
       }
     } finally {
       setIsSubmitting(false);
@@ -76,7 +76,7 @@ export function VerifyEmailPage() {
       if (error instanceof ApiError) {
         setErrorMessage(error.payload?.message ?? error.message);
       } else {
-        setErrorMessage('Възникна неочаквана грешка при изпращане на нов код.');
+        setErrorMessage('Възникна проблем при изпращане на нов код. Опитай отново.');
       }
     } finally {
       setIsResending(false);

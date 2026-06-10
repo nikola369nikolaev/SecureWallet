@@ -1,4 +1,5 @@
 using SecureWallet.Application.Features.Transactions.DTOs;
+using SecureWallet.Application.Features.Admin.DTOs;
 using SecureWallet.Domain.Entities;
 
 namespace SecureWallet.Application.Interfaces.Repositories;
@@ -12,6 +13,10 @@ public interface ITransactionRepository
     Task<TransactionHistoryPageDto> GetHistoryPageAsync(
         Guid walletId,
         string currency,
+        TransactionHistoryQueryParametersDto queryParameters,
+        CancellationToken cancellationToken = default);
+
+    Task<AdminTransactionHistoryPageDto> GetAdminHistoryPageAsync(
         TransactionHistoryQueryParametersDto queryParameters,
         CancellationToken cancellationToken = default);
 

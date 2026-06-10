@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using SecureWallet.Application.Features.Admin.Commands.CreateSupportAccount;
 using SecureWallet.Application.Features.Admin.Queries.GetAdminUserDetails;
+using SecureWallet.Application.Features.Admin.Queries.GetAdminTransactionHistory;
 using SecureWallet.Application.Features.Admin.Queries.GetAdminUsers;
 using SecureWallet.Application.Features.Admin.Queries.GetAdminUserTransactions;
 using SecureWallet.Application.Features.Auth;
@@ -38,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<GetAdminUsersHandler>();
         services.AddScoped<GetAdminUserDetailsHandler>();
         services.AddScoped<GetAdminUserTransactionsHandler>();
+        services.AddScoped<GetAdminTransactionHistoryHandler>();
         services.AddScoped<CreateDepositHandler>();
         services.AddScoped<CreateTransferHandler>();
         services.AddScoped<GetCurrentUserTransactionHistoryHandler>();

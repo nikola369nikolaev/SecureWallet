@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SecureWallet.Application.Features.Admin.DTOs;
 using SecureWallet.Application.Features.Transactions.DTOs;
 using SecureWallet.Application.Interfaces.Repositories;
 using SecureWallet.Domain.Entities;
@@ -105,6 +106,84 @@ public class TransactionRepository : ITransactionRepository
         };
     }
 
+    public async Task<AdminTransactionHistoryPageDto> GetAdminHistoryPageAsync(
+        TransactionHistoryQueryParametersDto queryParameters,
+        CancellationToken cancellationToken = default)
+    {
+        IQueryable<Transaction> baseQuery = _appDbContext.Transactions
+            .AsNoTracking()
+            .Include(transaction => transaction.SenderWallet)
+            .ThenInclude(wallet => wallet!.User)
+            .ThenInclude(user => user!.Role)
+            .Include(transaction => transaction.ReceiverWallet)
+            .ThenInclude(wallet => wallet!.User)
+            .ThenInclude(user => user!.Role)
+            .Where(transaction =>
+                transaction.SenderWallet != null &&
+                transaction.SenderWallet.User != null &&
+                transaction.ReceiverWallet != null &&
+                transaction.ReceiverWallet.User != null &&
+                transaction.SenderWallet.User.Role != null &&
+                transaction.ReceiverWallet.User.Role != null &&
+                transaction.SenderWallet.User.Role.Name != "Admin" &&
+                transaction.ReceiverWallet.User.Role.Name != "Admin");
+
+        IQueryable<Transaction> filteredQuery = ApplyAdminSearchFilter(
+            ApplyDateRangeFilter(baseQuery, queryParameters),
+            queryParameters.SearchTerm);
+
+        int visibleUserCount = await _appDbContext.Users
+            .AsNoTracking()
+            .Where(user => user.Role != null && user.Role.Name != "Admin")
+            .CountAsync(cancellationToken);
+
+        int transferCount = await filteredQuery.CountAsync(
+            transaction => transaction.SenderWalletId != transaction.ReceiverWalletId,
+            cancellationToken);
+
+        decimal transferTotal = await filteredQuery
+            .Where(transaction => transaction.SenderWalletId != transaction.ReceiverWalletId)
+            .SumAsync(transaction => (decimal?)transaction.Amount, cancellationToken) ?? 0m;
+
+        int depositCount = await filteredQuery.CountAsync(
+            transaction => transaction.SenderWalletId == transaction.ReceiverWalletId,
+            cancellationToken);
+
+        decimal depositTotal = await filteredQuery
+            .Where(transaction => transaction.SenderWalletId == transaction.ReceiverWalletId)
+            .SumAsync(transaction => (decimal?)transaction.Amount, cancellationToken) ?? 0m;
+
+        IQueryable<Transaction> typeFilteredQuery = ApplyAdminTypeFilter(filteredQuery, queryParameters.Type);
+        int totalCount = await typeFilteredQuery.CountAsync(cancellationToken);
+
+        List<Transaction> pageTransactions = await typeFilteredQuery
+            .OrderByDescending(transaction => transaction.CreatedAtUtc)
+            .Skip((queryParameters.Page - 1) * queryParameters.PageSize)
+            .Take(queryParameters.PageSize)
+            .ToListAsync(cancellationToken);
+
+        return new AdminTransactionHistoryPageDto
+        {
+            Items = pageTransactions
+                .Select(MapAdminTransaction)
+                .ToList(),
+            Summary = new AdminTransactionHistorySummaryDto
+            {
+                TransferCount = transferCount,
+                TransferTotal = transferTotal,
+                DepositCount = depositCount,
+                DepositTotal = depositTotal,
+                OperationCount = transferCount + depositCount,
+                VisibleUserCount = visibleUserCount,
+                Currency = "EUR"
+            },
+            Page = queryParameters.Page,
+            PageSize = queryParameters.PageSize,
+            TotalCount = totalCount,
+            HasMore = queryParameters.Page * queryParameters.PageSize < totalCount
+        };
+    }
+
     public async Task CreateCompletedTransferAsync(
         Transaction transaction,
         Wallet senderWallet,
@@ -167,6 +246,26 @@ public class TransactionRepository : ITransactionRepository
             (transaction.Description != null && transaction.Description.ToLower().Contains(normalizedSearchTerm)));
     }
 
+    private static IQueryable<Transaction> ApplyAdminSearchFilter(IQueryable<Transaction> query, string? searchTerm)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return query;
+        }
+
+        string normalizedSearchTerm = searchTerm.Trim().ToLower();
+
+        return query.Where(transaction =>
+            transaction.Reference.ToLower().Contains(normalizedSearchTerm) ||
+            (transaction.Description != null && transaction.Description.ToLower().Contains(normalizedSearchTerm)) ||
+            (transaction.SenderWallet != null &&
+             transaction.SenderWallet.User != null &&
+             transaction.SenderWallet.User.Username.ToLower().Contains(normalizedSearchTerm)) ||
+            (transaction.ReceiverWallet != null &&
+             transaction.ReceiverWallet.User != null &&
+             transaction.ReceiverWallet.User.Username.ToLower().Contains(normalizedSearchTerm)));
+    }
+
     private static IQueryable<Transaction> ApplyDateRangeFilter(
         IQueryable<Transaction> query,
         TransactionHistoryQueryParametersDto queryParameters)
@@ -226,6 +325,21 @@ public class TransactionRepository : ITransactionRepository
         return query;
     }
 
+    private static IQueryable<Transaction> ApplyAdminTypeFilter(IQueryable<Transaction> query, string? type)
+    {
+        if (string.Equals(type, "Transfers", StringComparison.OrdinalIgnoreCase))
+        {
+            return query.Where(transaction => transaction.SenderWalletId != transaction.ReceiverWalletId);
+        }
+
+        if (string.Equals(type, "Deposits", StringComparison.OrdinalIgnoreCase))
+        {
+            return query.Where(transaction => transaction.SenderWalletId == transaction.ReceiverWalletId);
+        }
+
+        return query;
+    }
+
     private static TransactionHistoryItemDto MapTransaction(Guid currentWalletId, string currency, Transaction transaction)
     {
         bool isSelfDeposit = transaction.SenderWalletId == currentWalletId &&
@@ -258,6 +372,27 @@ public class TransactionRepository : ITransactionRepository
             TransactionStatus.Failed => "Неуспешен",
             TransactionStatus.Cancelled => "Отказан",
             _ => status.ToString()
+        };
+    }
+
+    private static AdminTransactionHistoryItemDto MapAdminTransaction(Transaction transaction)
+    {
+        bool isDeposit = transaction.SenderWalletId == transaction.ReceiverWalletId;
+
+        return new AdminTransactionHistoryItemDto
+        {
+            TransactionId = transaction.Id,
+            Amount = transaction.Amount,
+            Currency = transaction.SenderWallet?.Currency ?? transaction.ReceiverWallet?.Currency ?? "EUR",
+            SenderUsername = isDeposit
+                ? "SecureWallet"
+                : transaction.SenderWallet?.User?.Username ?? string.Empty,
+            ReceiverUsername = transaction.ReceiverWallet?.User?.Username ?? string.Empty,
+            Kind = isDeposit ? "Deposit" : "Transfer",
+            Description = transaction.Description ?? string.Empty,
+            Status = FormatStatus(transaction.Status),
+            Reference = transaction.Reference,
+            CreatedAtUtc = transaction.CreatedAtUtc
         };
     }
 }

@@ -5,6 +5,7 @@ using SecureWallet.API.Requests.Admin;
 using SecureWallet.Application.Features.Admin.Commands.CreateSupportAccount;
 using SecureWallet.Application.Features.Admin.DTOs;
 using SecureWallet.Application.Features.Admin.Queries.GetAdminUserDetails;
+using SecureWallet.Application.Features.Admin.Queries.GetAdminTransactionHistory;
 using SecureWallet.Application.Features.Admin.Queries.GetAdminUsers;
 using SecureWallet.Application.Features.Admin.Queries.GetAdminUserTransactions;
 using SecureWallet.Application.Features.Auth;
@@ -25,6 +26,7 @@ public class AdminController : ControllerBase
     private readonly GetAdminUsersHandler _getAdminUsersHandler;
     private readonly GetAdminUserDetailsHandler _getAdminUserDetailsHandler;
     private readonly GetAdminUserTransactionsHandler _getAdminUserTransactionsHandler;
+    private readonly GetAdminTransactionHistoryHandler _getAdminTransactionHistoryHandler;
     private readonly CreateSupportAccountHandler _createSupportAccountHandler;
 
     public AdminController(
@@ -33,6 +35,7 @@ public class AdminController : ControllerBase
         GetAdminUsersHandler getAdminUsersHandler,
         GetAdminUserDetailsHandler getAdminUserDetailsHandler,
         GetAdminUserTransactionsHandler getAdminUserTransactionsHandler,
+        GetAdminTransactionHistoryHandler getAdminTransactionHistoryHandler,
         CreateSupportAccountHandler createSupportAccountHandler)
     {
         _logger = logger;
@@ -40,6 +43,7 @@ public class AdminController : ControllerBase
         _getAdminUsersHandler = getAdminUsersHandler;
         _getAdminUserDetailsHandler = getAdminUserDetailsHandler;
         _getAdminUserTransactionsHandler = getAdminUserTransactionsHandler;
+        _getAdminTransactionHistoryHandler = getAdminTransactionHistoryHandler;
         _createSupportAccountHandler = createSupportAccountHandler;
     }
 
@@ -139,6 +143,48 @@ public class AdminController : ControllerBase
         }
     }
 
+    [HttpGet("transactions/history")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(AdminTransactionHistoryPageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<AdminTransactionHistoryPageDto>> GetAdminTransactionHistory(
+        CancellationToken cancellationToken,
+        [FromQuery] string? type,
+        [FromQuery] string? dateRange,
+        [FromQuery] string? searchTerm,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        ObjectResult? securityResult = EnsureCompletedSecuritySetup();
+        if (securityResult is not null)
+        {
+            return securityResult;
+        }
+
+        TransactionHistoryQueryParametersDto queryParameters = new()
+        {
+            Type = type ?? "All",
+            DateRange = dateRange ?? "All",
+            SearchTerm = searchTerm ?? string.Empty,
+            Page = page,
+            PageSize = pageSize
+        };
+
+        AdminTransactionHistoryPageDto result = await _getAdminTransactionHistoryHandler.Handle(queryParameters, cancellationToken);
+
+        _logger.LogInformation(
+            "Администрация: {Actor} отвори общата история. Type={Type}, DateRange={DateRange}, Page={Page}, PageSize={PageSize}, Count={Count}.",
+            GetCurrentActor(),
+            queryParameters.Type,
+            queryParameters.DateRange,
+            queryParameters.Page,
+            queryParameters.PageSize,
+            result.Items.Count);
+
+        return Ok(result);
+    }
+
     [HttpPost("support-accounts")]
     [Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(SupportAccountResultDto), StatusCodes.Status200OK)]
@@ -189,7 +235,7 @@ public class AdminController : ControllerBase
     [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<AdminLogsResultDto>> GetLatestLogs(
-        [FromQuery] int take = 200,
+        [FromQuery] int take = 1000,
         CancellationToken cancellationToken = default)
     {
         ObjectResult? securityResult = EnsureCompletedSecuritySetup();
@@ -205,7 +251,7 @@ public class AdminController : ControllerBase
         }
 
         string[] allLines = await ReadAllLinesWithSharedAccessAsync(latestLogFilePath, cancellationToken);
-        int normalizedTake = Math.Clamp(take, 1, 500);
+        int normalizedTake = Math.Clamp(take, 1, 1000);
         string[] currentSessionLines = FilterCurrentSessionLines(allLines);
         string[] lastLines = currentSessionLines
             .Skip(Math.Max(0, currentSessionLines.Length - normalizedTake))

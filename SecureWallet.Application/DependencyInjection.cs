@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using FluentValidation;
+using Microsoft.Extensions.DependencyInjection;
 using SecureWallet.Application.Features.Admin.Commands.CreateSupportAccount;
 using SecureWallet.Application.Features.Admin.Queries.GetAdminUserDetails;
 using SecureWallet.Application.Features.Admin.Queries.GetAdminTransactionHistory;
@@ -22,6 +23,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
+        services.AddValidatorsFromAssemblyContaining<RegisterUserHandler>();
+
         services.AddScoped<AuthSessionIssuer>();
         services.AddScoped<RegisterUserHandler>();
         services.AddScoped<LoginUserHandler>();

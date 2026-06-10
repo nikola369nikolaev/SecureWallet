@@ -1,7 +1,8 @@
-﻿using SecureWallet.Application.Features.Auth.DTOs;
-using SecureWallet.Application.Features.Auth.Validators;
+using FluentValidation;
+using SecureWallet.Application.Features.Auth.DTOs;
 using SecureWallet.Application.Interfaces.Repositories;
 using SecureWallet.Application.Interfaces.Security;
+using SecureWallet.Application.Validation;
 using SecureWallet.Domain.Entities;
 
 namespace SecureWallet.Application.Features.Auth.Commands.VerifyEmail;
@@ -11,22 +12,23 @@ public class VerifyEmailCodeHandler
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly AuthSessionIssuer _authSessionIssuer;
+    private readonly IValidator<VerifyEmailCodeCommand> _validator;
 
     public VerifyEmailCodeHandler(
         IUserRepository userRepository,
         IPasswordHasher passwordHasher,
-        AuthSessionIssuer authSessionIssuer)
+        AuthSessionIssuer authSessionIssuer,
+        IValidator<VerifyEmailCodeCommand> validator)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _authSessionIssuer = authSessionIssuer;
+        _validator = validator;
     }
 
     public async Task<EmailVerificationResultDto> Handle(VerifyEmailCodeCommand command, CancellationToken cancellationToken = default)
     {
-        AuthInputValidator.ValidateEmail(command.Email);
-        AuthInputValidator.ValidateRequiredField(command.Code, "Кодът за потвърждение");
-        AuthInputValidator.ValidateNoLeadingOrTrailingWhitespace(command.Code, "Кодът за потвърждение");
+        await _validator.ValidateAndThrowInvalidOperationAsync(command, cancellationToken);
 
         User? user = await _userRepository.GetByEmailAsync(command.Email, cancellationToken);
         if (user is null)
@@ -64,7 +66,7 @@ public class VerifyEmailCodeHandler
 
         return new EmailVerificationResultDto
         {
-            Message = "Имейлът беше потвърден успешно. Продължи с настройката на двуфакторната защита.",
+            Message = "Имейлът е потвърден. Продължи с настройката на временния код.",
             AccessToken = tokens.AccessToken,
             ExpiresAtUtc = tokens.AccessTokenExpiresAtUtc,
             RefreshToken = tokens.RefreshToken,

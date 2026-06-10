@@ -56,7 +56,7 @@ public class BeginTotpSetupHandler
         {
             IsAlreadyEnabled = false,
             CanShowQrCode = true,
-            Message = "Сканирай QR кода или въведи ключа ръчно в authenticator приложението.",
+            Message = "Сканирай QR кода или въведи ключа ръчно в приложението за временни кодове.",
             ManualEntryKey = user.PendingTotpSecret,
             SetupCodeUri = setupCodeUri,
             QrCodeImageDataUri = qrCodeImageDataUri

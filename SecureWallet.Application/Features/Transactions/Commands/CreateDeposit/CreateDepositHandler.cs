@@ -1,7 +1,8 @@
-using SecureWallet.Application.Features.Auth.Validators;
+using FluentValidation;
 using SecureWallet.Application.Features.Transactions.DTOs;
 using SecureWallet.Application.Interfaces.Repositories;
 using SecureWallet.Application.Interfaces.Security;
+using SecureWallet.Application.Validation;
 using SecureWallet.Domain.Entities;
 using SecureWallet.Domain.Enums;
 
@@ -13,24 +14,25 @@ public class CreateDepositHandler
     private readonly IWalletRepository _walletRepository;
     private readonly ITransactionRepository _transactionRepository;
     private readonly ITotpService _totpService;
+    private readonly IValidator<CreateDepositCommand> _validator;
 
     public CreateDepositHandler(
         IUserRepository userRepository,
         IWalletRepository walletRepository,
         ITransactionRepository transactionRepository,
-        ITotpService totpService)
+        ITotpService totpService,
+        IValidator<CreateDepositCommand> validator)
     {
         _userRepository = userRepository;
         _walletRepository = walletRepository;
         _transactionRepository = transactionRepository;
         _totpService = totpService;
+        _validator = validator;
     }
 
     public async Task<DepositResultDto> Handle(CreateDepositCommand command, CancellationToken cancellationToken = default)
     {
-        ValidateAmount(command.Amount);
-        AuthInputValidator.ValidateRequiredField(command.TotpCode, "Кодът от authenticator приложението");
-        AuthInputValidator.ValidateNoLeadingOrTrailingWhitespace(command.TotpCode, "Кодът от authenticator приложението");
+        await _validator.ValidateAndThrowInvalidOperationAsync(command, cancellationToken);
 
         User? user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken);
         if (user is null || !user.IsActive)
@@ -40,13 +42,13 @@ public class CreateDepositHandler
 
         if (!user.TwoFactorEnabled || string.IsNullOrWhiteSpace(user.TotpSecret))
         {
-            throw new InvalidOperationException("Първо трябва да включиш двуфакторната защита.");
+            throw new InvalidOperationException("Двуфакторната защита не е включена за този акаунт.");
         }
 
         bool isTotpCodeValid = _totpService.VerifyCode(user.TotpSecret, command.TotpCode);
         if (!isTotpCodeValid)
         {
-            throw new InvalidOperationException("Кодът от authenticator приложението е грешен.");
+            throw new InvalidOperationException("Временният код е грешен.");
         }
 
         Wallet? wallet = await _walletRepository.GetByUserIdAsync(command.UserId, cancellationToken);
@@ -79,7 +81,7 @@ public class CreateDepositHandler
 
         return new DepositResultDto
         {
-            Message = "Депозитът беше добавен успешно.",
+            Message = "Депозитът е добавен.",
             TransactionId = transaction.Id,
             Amount = transaction.Amount,
             Currency = wallet.Currency,
@@ -88,19 +90,6 @@ public class CreateDepositHandler
             Status = FormatStatus(transaction.Status),
             CreatedAtUtc = transaction.CreatedAtUtc
         };
-    }
-
-    private static void ValidateAmount(decimal amount)
-    {
-        if (amount <= 0)
-        {
-            throw new InvalidOperationException("Сумата трябва да е по-голяма от 0.");
-        }
-
-        if (decimal.Round(amount, 2) != amount)
-        {
-            throw new InvalidOperationException("Сумата може да има най-много 2 знака след десетичната запетая.");
-        }
     }
 
     private static string GenerateReference()

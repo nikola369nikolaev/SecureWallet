@@ -1,7 +1,8 @@
-﻿using SecureWallet.Application.Features.Auth.DTOs;
-using SecureWallet.Application.Features.Auth.Validators;
+using FluentValidation;
+using SecureWallet.Application.Features.Auth.DTOs;
 using SecureWallet.Application.Interfaces.Repositories;
 using SecureWallet.Application.Interfaces.Security;
+using SecureWallet.Application.Validation;
 using SecureWallet.Domain.Entities;
 
 namespace SecureWallet.Application.Features.Auth.Commands.VerifyEmail;
@@ -14,22 +15,25 @@ public class ResendEmailVerificationCodeHandler
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IEmailVerificationSender _emailVerificationSender;
+    private readonly IValidator<ResendEmailVerificationCodeCommand> _validator;
 
     public ResendEmailVerificationCodeHandler(
         IUserRepository userRepository,
         IPasswordHasher passwordHasher,
-        IEmailVerificationSender emailVerificationSender)
+        IEmailVerificationSender emailVerificationSender,
+        IValidator<ResendEmailVerificationCodeCommand> validator)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _emailVerificationSender = emailVerificationSender;
+        _validator = validator;
     }
 
     public async Task<EmailVerificationCodeDispatchResultDto> Handle(
         ResendEmailVerificationCodeCommand command,
         CancellationToken cancellationToken = default)
     {
-        AuthInputValidator.ValidateEmail(command.Email);
+        await _validator.ValidateAndThrowInvalidOperationAsync(command, cancellationToken);
 
         User? user = await _userRepository.GetByEmailAsync(command.Email, cancellationToken);
         if (user is null)

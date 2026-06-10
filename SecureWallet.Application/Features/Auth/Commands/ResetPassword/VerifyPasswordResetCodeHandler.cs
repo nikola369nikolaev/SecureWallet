@@ -1,7 +1,8 @@
-﻿using SecureWallet.Application.Features.Auth.DTOs;
-using SecureWallet.Application.Features.Auth.Validators;
+using FluentValidation;
+using SecureWallet.Application.Features.Auth.DTOs;
 using SecureWallet.Application.Interfaces.Repositories;
 using SecureWallet.Application.Interfaces.Security;
+using SecureWallet.Application.Validation;
 using SecureWallet.Domain.Entities;
 
 namespace SecureWallet.Application.Features.Auth.Commands.ResetPassword;
@@ -12,19 +13,21 @@ public class VerifyPasswordResetCodeHandler
 
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly IValidator<VerifyPasswordResetCodeCommand> _validator;
 
-    public VerifyPasswordResetCodeHandler(IUserRepository userRepository, IPasswordHasher passwordHasher)
+    public VerifyPasswordResetCodeHandler(
+        IUserRepository userRepository,
+        IPasswordHasher passwordHasher,
+        IValidator<VerifyPasswordResetCodeCommand> validator)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
+        _validator = validator;
     }
 
     public async Task<PasswordResetCodeVerificationResultDto> Handle(VerifyPasswordResetCodeCommand command, CancellationToken cancellationToken = default)
     {
-        AuthInputValidator.ValidateEmail(command.Email);
-        AuthInputValidator.ValidatePhoneNumber(command.PhoneNumber);
-        AuthInputValidator.ValidateRequiredField(command.Code, "Кодът за потвърждение");
-        AuthInputValidator.ValidateNoLeadingOrTrailingWhitespace(command.Code, "Кодът за потвърждение");
+        await _validator.ValidateAndThrowInvalidOperationAsync(command, cancellationToken);
 
         User? user = await _userRepository.GetByEmailAndPhoneNumberAsync(command.Email, command.PhoneNumber, cancellationToken);
 
@@ -35,7 +38,7 @@ public class VerifyPasswordResetCodeHandler
 
         if (user.PasswordResetCodeLockoutEndUtc is not null && user.PasswordResetCodeLockoutEndUtc.Value > DateTime.UtcNow)
         {
-            throw new InvalidOperationException("Смяната на паролата е заключена за 15 минути след 3 грешни кода.");
+            throw new InvalidOperationException("Смяната на паролата е временно заключена за 15 минути след 3 грешни кода.");
         }
 
         if (string.IsNullOrWhiteSpace(user.PasswordResetCodeHash) || user.PasswordResetCodeExpiresAtUtc is null)
@@ -45,7 +48,7 @@ public class VerifyPasswordResetCodeHandler
 
         if (user.PasswordResetCodeExpiresAtUtc.Value <= DateTime.UtcNow)
         {
-            throw new InvalidOperationException("SMS кодът е изтекъл. Поискай нов код.");
+            throw new InvalidOperationException("SMS кодът е изтекъл. Поискай нов код и опитай отново.");
         }
 
         if (!_passwordHasher.Verify(command.Code, user.PasswordResetCodeHash))
@@ -61,7 +64,7 @@ public class VerifyPasswordResetCodeHandler
                 user.PasswordResetCodeLockoutEndUtc = DateTime.UtcNow.Add(PasswordResetCodeLockoutDuration);
 
                 await _userRepository.UpdateAsync(user, cancellationToken);
-                throw new InvalidOperationException("Твърде много грешни кодове. Смяната на паролата е заключена за 15 минути.");
+                throw new InvalidOperationException("Въведени са твърде много грешни кодове. Смяната на паролата е заключена за 15 минути.");
             }
 
             await _userRepository.UpdateAsync(user, cancellationToken);
@@ -82,7 +85,7 @@ public class VerifyPasswordResetCodeHandler
 
         return new PasswordResetCodeVerificationResultDto
         {
-            Message = "SMS потвърждението беше успешно.",
+            Message = "SMS кодът е потвърден.",
             ResetSessionToken = resetSessionToken,
             Email = user.Email
         };

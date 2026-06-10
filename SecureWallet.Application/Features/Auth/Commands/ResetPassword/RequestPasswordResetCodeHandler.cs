@@ -1,7 +1,8 @@
-﻿using SecureWallet.Application.Features.Auth.DTOs;
-using SecureWallet.Application.Features.Auth.Validators;
+using FluentValidation;
+using SecureWallet.Application.Features.Auth.DTOs;
 using SecureWallet.Application.Interfaces.Repositories;
 using SecureWallet.Application.Interfaces.Security;
+using SecureWallet.Application.Validation;
 using SecureWallet.Domain.Entities;
 
 namespace SecureWallet.Application.Features.Auth.Commands.ResetPassword;
@@ -13,21 +14,23 @@ public class RequestPasswordResetCodeHandler
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ISmsVerificationService _smsVerificationService;
+    private readonly IValidator<RequestPasswordResetCodeCommand> _validator;
 
     public RequestPasswordResetCodeHandler(
         IUserRepository userRepository,
         IPasswordHasher passwordHasher,
-        ISmsVerificationService smsVerificationService)
+        ISmsVerificationService smsVerificationService,
+        IValidator<RequestPasswordResetCodeCommand> validator)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _smsVerificationService = smsVerificationService;
+        _validator = validator;
     }
 
     public async Task<PasswordResetCodeDispatchResultDto> Handle(RequestPasswordResetCodeCommand command, CancellationToken cancellationToken = default)
     {
-        AuthInputValidator.ValidateEmail(command.Email);
-        AuthInputValidator.ValidatePhoneNumber(command.PhoneNumber);
+        await _validator.ValidateAndThrowInvalidOperationAsync(command, cancellationToken);
 
         User? user = await _userRepository.GetByEmailAndPhoneNumberAsync(command.Email, command.PhoneNumber, cancellationToken);
 
@@ -43,7 +46,7 @@ public class RequestPasswordResetCodeHandler
 
         string resetCode = GenerateResetCode();
         SmsVerificationDispatchResult dispatchResult = await _smsVerificationService
-                .SendPasswordResetCodeAsync(user.PhoneNumber!, resetCode, cancellationToken);
+            .SendPasswordResetCodeAsync(user.PhoneNumber!, resetCode, cancellationToken);
 
         user.PasswordResetCodeHash = _passwordHasher.Hash(resetCode);
         user.PasswordResetCodeExpiresAtUtc = DateTime.UtcNow.Add(PasswordResetCodeLifetime);

@@ -1,7 +1,8 @@
-﻿using SecureWallet.Application.Features.Auth.DTOs;
-using SecureWallet.Application.Features.Auth.Validators;
+using FluentValidation;
+using SecureWallet.Application.Features.Auth.DTOs;
 using SecureWallet.Application.Interfaces.Repositories;
 using SecureWallet.Application.Interfaces.Security;
+using SecureWallet.Application.Validation;
 using SecureWallet.Domain.Entities;
 
 namespace SecureWallet.Application.Features.Auth.Commands.Totp;
@@ -13,21 +14,23 @@ public class ResetTotpSetupHandler
     private readonly IUserRepository _userRepository;
     private readonly ITotpService _totpService;
     private readonly IQrCodeService _qrCodeService;
+    private readonly IValidator<ResetTotpSetupCommand> _validator;
 
     public ResetTotpSetupHandler(
         IUserRepository userRepository,
         ITotpService totpService,
-        IQrCodeService qrCodeService)
+        IQrCodeService qrCodeService,
+        IValidator<ResetTotpSetupCommand> validator)
     {
         _userRepository = userRepository;
         _totpService = totpService;
         _qrCodeService = qrCodeService;
+        _validator = validator;
     }
 
     public async Task<TotpSetupDto> Handle(ResetTotpSetupCommand command, CancellationToken cancellationToken = default)
     {
-        AuthInputValidator.ValidateRequiredField(command.Code, "Кодът от authenticator приложението");
-        AuthInputValidator.ValidateNoLeadingOrTrailingWhitespace(command.Code, "Кодът от authenticator приложението");
+        await _validator.ValidateAndThrowInvalidOperationAsync(command, cancellationToken);
 
         User? user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken);
         if (user is null)
@@ -43,7 +46,7 @@ public class ResetTotpSetupHandler
         bool isCodeValid = _totpService.VerifyCode(user.TotpSecret, command.Code);
         if (!isCodeValid)
         {
-            throw new InvalidOperationException("Кодът от authenticator приложението е грешен.");
+            throw new InvalidOperationException("Временният код е грешен.");
         }
 
         user.PendingTotpSecret = _totpService.GenerateSecret();
@@ -58,7 +61,7 @@ public class ResetTotpSetupHandler
         {
             IsAlreadyEnabled = false,
             CanShowQrCode = true,
-            Message = "Старият authenticator остава активен, докато не потвърдиш новия код.",
+            Message = "Старият временен код остава активен, докато не потвърдиш новия код.",
             ManualEntryKey = user.PendingTotpSecret,
             SetupCodeUri = setupCodeUri,
             QrCodeImageDataUri = qrCodeImageDataUri

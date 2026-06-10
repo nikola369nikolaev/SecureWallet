@@ -1,7 +1,8 @@
-﻿using SecureWallet.Application.Features.Auth.DTOs;
-using SecureWallet.Application.Features.Auth.Validators;
+using FluentValidation;
+using SecureWallet.Application.Features.Auth.DTOs;
 using SecureWallet.Application.Interfaces.Repositories;
 using SecureWallet.Application.Interfaces.Security;
+using SecureWallet.Application.Validation;
 using SecureWallet.Domain.Entities;
 
 namespace SecureWallet.Application.Features.Auth.Commands.ResetPassword;
@@ -11,28 +12,23 @@ public class ResetPasswordHandler
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly AuthSessionIssuer _authSessionIssuer;
+    private readonly IValidator<ResetPasswordCommand> _validator;
 
     public ResetPasswordHandler(
         IUserRepository userRepository,
         IPasswordHasher passwordHasher,
-        AuthSessionIssuer authSessionIssuer)
+        AuthSessionIssuer authSessionIssuer,
+        IValidator<ResetPasswordCommand> validator)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _authSessionIssuer = authSessionIssuer;
+        _validator = validator;
     }
 
     public async Task<PasswordResetCompletionResultDto> Handle(ResetPasswordCommand command, CancellationToken cancellationToken = default)
     {
-        AuthInputValidator.ValidateRequiredField(command.ResetSessionToken, "Токенът за смяна на паролата");
-        AuthInputValidator.ValidateNoLeadingOrTrailingWhitespace(command.ResetSessionToken, "Токенът за смяна на паролата");
-
-        IReadOnlyCollection<string> passwordErrors = PasswordValidator.Validate(command.NewPassword);
-
-        if (passwordErrors.Count > 0)
-        {
-            throw new InvalidOperationException(passwordErrors.First());
-        }
+        await _validator.ValidateAndThrowInvalidOperationAsync(command, cancellationToken);
 
         User? user = await _userRepository.GetByPasswordResetSessionTokenAsync(command.ResetSessionToken, cancellationToken);
 
@@ -64,7 +60,7 @@ public class ResetPasswordHandler
 
         return new PasswordResetCompletionResultDto
         {
-            Message = "Паролата беше сменена успешно. Продължи с новата TOTP настройка.",
+            Message = "Паролата е сменена. Продължи с новата настройка на временния код.",
             AccessToken = tokens.AccessToken,
             ExpiresAtUtc = tokens.AccessTokenExpiresAtUtc,
             RefreshToken = tokens.RefreshToken,

@@ -1,8 +1,9 @@
-﻿using SecureWallet.Application.Features.Auth.DTOs;
-using SecureWallet.Application.Features.Auth.Validators;
+using FluentValidation;
+using SecureWallet.Application.Features.Auth.DTOs;
 using SecureWallet.Application.Features.Wallets;
 using SecureWallet.Application.Interfaces.Repositories;
 using SecureWallet.Application.Interfaces.Security;
+using SecureWallet.Application.Validation;
 using SecureWallet.Domain.Entities;
 
 namespace SecureWallet.Application.Features.Auth.Commands.Register;
@@ -15,41 +16,25 @@ public class RegisterUserHandler
     private readonly IRoleRepository _roleRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IEmailVerificationSender _emailVerificationSender;
+    private readonly IValidator<RegisterUserCommand> _validator;
 
     public RegisterUserHandler(
         IUserRepository userRepository,
         IRoleRepository roleRepository,
         IPasswordHasher passwordHasher,
-        IEmailVerificationSender emailVerificationSender)
+        IEmailVerificationSender emailVerificationSender,
+        IValidator<RegisterUserCommand> validator)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
         _passwordHasher = passwordHasher;
         _emailVerificationSender = emailVerificationSender;
+        _validator = validator;
     }
 
     public async Task<RegisterResultDto> Handle(RegisterUserCommand command, CancellationToken cancellationToken = default)
     {
-        AuthInputValidator.ValidateRequiredField(command.Password, "Парола");
-        AuthInputValidator.ValidateRequiredField(command.ConfirmPassword, "Потвърждение на паролата");
-
-        if (command.Password != command.ConfirmPassword)
-        {
-            throw new InvalidOperationException("Паролите не съвпадат.");
-        }
-
-        IReadOnlyCollection<string> validationErrors = PasswordValidator.Validate(command.Password);
-
-        if (validationErrors.Count > 0)
-        {
-            throw new InvalidOperationException(string.Join(" ", validationErrors));
-        }
-
-        AuthInputValidator.ValidateEmail(command.Email);
-        AuthInputValidator.ValidateUsername(command.Username);
-        AuthInputValidator.ValidatePhoneNumber(command.PhoneNumber);
-        AuthInputValidator.ValidatePersonName(command.FirstName ?? string.Empty, "Собственото име");
-        AuthInputValidator.ValidatePersonName(command.LastName ?? string.Empty, "Фамилията");
+        await _validator.ValidateAndThrowInvalidOperationAsync(command, cancellationToken, combineAllMessages: true);
 
         User? existingUserByEmail = await _userRepository.GetByEmailAsync(command.Email, cancellationToken);
         bool retryingPendingRegistration = existingUserByEmail is not null && !existingUserByEmail.IsEmailVerified;
@@ -69,7 +54,7 @@ public class RegisterUserHandler
         Role? userRole = await _roleRepository.GetByNameAsync("User", cancellationToken);
         if (userRole is null)
         {
-            throw new InvalidOperationException("Ролята User не беше намерена.");
+            throw new InvalidOperationException("Не беше намерена ролята User.");
         }
 
         string emailVerificationCode = GenerateVerificationCode();
@@ -134,7 +119,7 @@ public class RegisterUserHandler
             UserId = newUser.Id,
             Username = newUser.Username,
             Email = newUser.Email,
-            Message = "Изпратихме код за потвърждение на имейла. Въведи го, за да продължиш към двуфакторната защита.",
+            Message = "Изпратихме код за потвърждение на имейла. Въведи го, за да продължиш към настройката на временния код.",
             RequiresEmailVerification = true,
             SecuritySetupRequired = true
         };

@@ -1,7 +1,8 @@
-﻿using SecureWallet.Application.Features.Auth.Validators;
+using FluentValidation;
 using SecureWallet.Application.Features.Transactions.DTOs;
 using SecureWallet.Application.Interfaces.Repositories;
 using SecureWallet.Application.Interfaces.Security;
+using SecureWallet.Application.Validation;
 using SecureWallet.Domain.Entities;
 using SecureWallet.Domain.Enums;
 
@@ -17,25 +18,25 @@ public class CreateTransferHandler
     private readonly IUserRepository _userRepository;
     private readonly ITransactionRepository _transactionRepository;
     private readonly ITotpService _totpService;
+    private readonly IValidator<CreateTransferCommand> _validator;
 
     public CreateTransferHandler(
         IWalletRepository walletRepository,
         IUserRepository userRepository,
         ITransactionRepository transactionRepository,
-        ITotpService totpService)
+        ITotpService totpService,
+        IValidator<CreateTransferCommand> validator)
     {
         _walletRepository = walletRepository;
         _userRepository = userRepository;
         _transactionRepository = transactionRepository;
         _totpService = totpService;
+        _validator = validator;
     }
 
     public async Task<TransferResultDto> Handle(CreateTransferCommand command, CancellationToken cancellationToken = default)
     {
-        ValidateRecipient(command.RecipientType, command.RecipientValue);
-        ValidateAmount(command.Amount);
-        ValidateDescription(command.Description);
-        ValidateTotpCode(command.TotpCode);
+        await _validator.ValidateAndThrowInvalidOperationAsync(command, cancellationToken);
 
         User? senderUser = await _userRepository.GetByIdAsync(command.SenderUserId, cancellationToken);
         if (senderUser is null || !senderUser.IsActive)
@@ -45,13 +46,13 @@ public class CreateTransferHandler
 
         if (!senderUser.TwoFactorEnabled || string.IsNullOrWhiteSpace(senderUser.TotpSecret))
         {
-            throw new InvalidOperationException("Първо трябва да включиш двуфакторната защита.");
+            throw new InvalidOperationException("Двуфакторната защита не е включена за този акаунт.");
         }
 
         bool isTotpCodeValid = _totpService.VerifyCode(senderUser.TotpSecret, command.TotpCode);
         if (!isTotpCodeValid)
         {
-            throw new InvalidOperationException("Кодът от authenticator приложението е грешен.");
+            throw new InvalidOperationException("Временният код е грешен.");
         }
 
         Wallet? senderWallet = await _walletRepository.GetByUserIdAsync(command.SenderUserId, cancellationToken);
@@ -62,7 +63,7 @@ public class CreateTransferHandler
 
         if (!senderWallet.IsActive)
         {
-            throw new InvalidOperationException("Твоят портфейл не е активен.");
+            throw new InvalidOperationException("Портфейлът на подателя не е активен.");
         }
 
         User receiverUser = await ResolveReceiverUserAsync(command, cancellationToken);
@@ -123,7 +124,7 @@ public class CreateTransferHandler
 
         return new TransferResultDto
         {
-            Message = "Преводът беше изпратен успешно.",
+            Message = "Преводът е изпратен.",
             TransactionId = transaction.Id,
             ReceiverUsername = receiverUser.Username,
             Amount = transaction.Amount,
@@ -173,76 +174,6 @@ public class CreateTransferHandler
         }
 
         throw new InvalidOperationException("Неподдържан тип получател.");
-    }
-
-    private static void ValidateRecipient(string recipientType, string recipientValue)
-    {
-        AuthInputValidator.ValidateRequiredField(recipientType, "Типът получател");
-        AuthInputValidator.ValidateRequiredField(recipientValue, "Получателят");
-        AuthInputValidator.ValidateNoLeadingOrTrailingWhitespace(recipientType, "Типът получател");
-        AuthInputValidator.ValidateNoLeadingOrTrailingWhitespace(recipientValue, "Получателят");
-
-        if (string.Equals(recipientType, UsernameRecipientType, StringComparison.OrdinalIgnoreCase))
-        {
-            AuthInputValidator.ValidateUsername(recipientValue);
-            return;
-        }
-
-        if (string.Equals(recipientType, PhoneNumberRecipientType, StringComparison.OrdinalIgnoreCase))
-        {
-            AuthInputValidator.ValidatePhoneNumber(recipientValue);
-            return;
-        }
-
-        if (string.Equals(recipientType, IbanRecipientType, StringComparison.OrdinalIgnoreCase))
-        {
-            string normalizedIban = recipientValue.Replace(" ", string.Empty);
-            if (normalizedIban.Length != 22 || !normalizedIban.All(char.IsLetterOrDigit))
-            {
-                throw new InvalidOperationException("IBAN-ът трябва да е във валиден формат.");
-            }
-
-            return;
-        }
-
-        throw new InvalidOperationException("Неподдържан тип получател.");
-    }
-
-    private static void ValidateAmount(decimal amount)
-    {
-        if (amount <= 0)
-        {
-            throw new InvalidOperationException("Сумата трябва да е по-голяма от 0.");
-        }
-
-        if (decimal.Round(amount, 2) != amount)
-        {
-            throw new InvalidOperationException("Сумата може да има най-много 2 знака след десетичната запетая.");
-        }
-    }
-
-    private static void ValidateDescription(string? description)
-    {
-        if (string.IsNullOrEmpty(description))
-        {
-            return;
-        }
-
-        if (description != description.Trim())
-        {
-            throw new InvalidOperationException("Коментарът не трябва да започва или завършва с интервали.");
-        }
-
-        if (description.Length > 500)
-        {
-            throw new InvalidOperationException("Коментарът може да е най-много 500 символа.");
-        }
-    }
-
-    private static void ValidateTotpCode(string totpCode)
-    {
-        AuthInputValidator.ValidateRequiredField(totpCode, "Кодът от authenticator приложението");
-        AuthInputValidator.ValidateNoLeadingOrTrailingWhitespace(totpCode, "Кодът от authenticator приложението");
     }
 
     private static string GenerateReference()

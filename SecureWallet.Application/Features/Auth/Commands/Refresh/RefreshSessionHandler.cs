@@ -1,6 +1,7 @@
+using FluentValidation;
 using SecureWallet.Application.Features.Auth.DTOs;
-using SecureWallet.Application.Features.Auth.Validators;
 using SecureWallet.Application.Interfaces.Repositories;
+using SecureWallet.Application.Validation;
 using SecureWallet.Domain.Entities;
 
 namespace SecureWallet.Application.Features.Auth.Commands.Refresh;
@@ -9,17 +10,21 @@ public class RefreshSessionHandler
 {
     private readonly IUserRepository _userRepository;
     private readonly AuthSessionIssuer _authSessionIssuer;
+    private readonly IValidator<RefreshSessionCommand> _validator;
 
-    public RefreshSessionHandler(IUserRepository userRepository, AuthSessionIssuer authSessionIssuer)
+    public RefreshSessionHandler(
+        IUserRepository userRepository,
+        AuthSessionIssuer authSessionIssuer,
+        IValidator<RefreshSessionCommand> validator)
     {
         _userRepository = userRepository;
         _authSessionIssuer = authSessionIssuer;
+        _validator = validator;
     }
 
     public async Task<RefreshSessionResultDto> Handle(RefreshSessionCommand command, CancellationToken cancellationToken = default)
     {
-        AuthInputValidator.ValidateRequiredField(command.RefreshToken, "Refresh token");
-        AuthInputValidator.ValidateNoLeadingOrTrailingWhitespace(command.RefreshToken, "Refresh token");
+        await _validator.ValidateAndThrowInvalidOperationAsync(command, cancellationToken);
 
         User? user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken);
         if (user is null || !user.IsActive)

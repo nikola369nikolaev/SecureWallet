@@ -36,7 +36,7 @@ public class TestSmsVerificationService : ISmsVerificationService
         
         SmsVerificationDispatchResult result = new()
         {
-            Message = $"СМС код беше генериран за {phoneNumber}."
+            Message = $"Изпратихме СМС код на {phoneNumber}."
         };
 
         return result;

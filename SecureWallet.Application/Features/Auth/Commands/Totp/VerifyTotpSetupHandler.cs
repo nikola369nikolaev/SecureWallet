@@ -1,7 +1,8 @@
-﻿using SecureWallet.Application.Features.Auth.DTOs;
-using SecureWallet.Application.Features.Auth.Validators;
+using FluentValidation;
+using SecureWallet.Application.Features.Auth.DTOs;
 using SecureWallet.Application.Interfaces.Repositories;
 using SecureWallet.Application.Interfaces.Security;
+using SecureWallet.Application.Validation;
 using SecureWallet.Domain.Entities;
 
 namespace SecureWallet.Application.Features.Auth.Commands.Totp;
@@ -11,21 +12,23 @@ public class VerifyTotpSetupHandler
     private readonly IUserRepository _userRepository;
     private readonly ITotpService _totpService;
     private readonly AuthSessionIssuer _authSessionIssuer;
+    private readonly IValidator<VerifyTotpSetupCommand> _validator;
 
     public VerifyTotpSetupHandler(
         IUserRepository userRepository,
         ITotpService totpService,
-        AuthSessionIssuer authSessionIssuer)
+        AuthSessionIssuer authSessionIssuer,
+        IValidator<VerifyTotpSetupCommand> validator)
     {
         _userRepository = userRepository;
         _totpService = totpService;
         _authSessionIssuer = authSessionIssuer;
+        _validator = validator;
     }
 
     public async Task<TotpVerificationResultDto> Handle(VerifyTotpSetupCommand command, CancellationToken cancellationToken = default)
     {
-        AuthInputValidator.ValidateRequiredField(command.Code, "Кодът от authenticator приложението");
-        AuthInputValidator.ValidateNoLeadingOrTrailingWhitespace(command.Code, "Кодът от authenticator приложението");
+        await _validator.ValidateAndThrowInvalidOperationAsync(command, cancellationToken);
 
         User? user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken);
         if (user is null)
@@ -35,13 +38,13 @@ public class VerifyTotpSetupHandler
 
         if (string.IsNullOrWhiteSpace(user.PendingTotpSecret))
         {
-            throw new InvalidOperationException("Няма активна TOTP настройка за този акаунт.");
+            throw new InvalidOperationException("Няма активна настройка на временен код за този акаунт.");
         }
 
         bool isCodeValid = _totpService.VerifyCode(user.PendingTotpSecret, command.Code);
         if (!isCodeValid)
         {
-            throw new InvalidOperationException("Кодът от authenticator приложението е грешен.");
+            throw new InvalidOperationException("Временният код е грешен.");
         }
 
         user.TotpSecret = user.PendingTotpSecret;
@@ -54,7 +57,7 @@ public class VerifyTotpSetupHandler
 
         return new TotpVerificationResultDto
         {
-            Message = "Двуфакторната защита беше включена успешно.",
+            Message = "Двуфакторната защита е включена.",
             TwoFactorEnabled = true,
             AccessToken = tokens.AccessToken,
             ExpiresAtUtc = tokens.AccessTokenExpiresAtUtc,

@@ -1,8 +1,9 @@
-﻿using SecureWallet.Application.Features.Auth.DTOs;
+using FluentValidation;
+using SecureWallet.Application.Features.Auth.DTOs;
 using SecureWallet.Application.Features.Auth.Exceptions;
-using SecureWallet.Application.Features.Auth.Validators;
 using SecureWallet.Application.Interfaces.Repositories;
 using SecureWallet.Application.Interfaces.Security;
+using SecureWallet.Application.Validation;
 using SecureWallet.Domain.Entities;
 
 namespace SecureWallet.Application.Features.Auth.Commands.Login;
@@ -18,25 +19,27 @@ public class LoginUserHandler
     private readonly AuthSessionIssuer _authSessionIssuer;
     private readonly ICaptchaVerificationService _captchaVerificationService;
     private readonly ITotpService _totpService;
+    private readonly IValidator<LoginUserCommand> _validator;
 
     public LoginUserHandler(
         IUserRepository userRepository,
         IPasswordHasher passwordHasher,
         AuthSessionIssuer authSessionIssuer,
         ICaptchaVerificationService captchaVerificationService,
-        ITotpService totpService)
+        ITotpService totpService,
+        IValidator<LoginUserCommand> validator)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _authSessionIssuer = authSessionIssuer;
         _captchaVerificationService = captchaVerificationService;
         _totpService = totpService;
+        _validator = validator;
     }
 
     public async Task<LoginResultDto> Handle(LoginUserCommand command, CancellationToken cancellationToken = default)
     {
-        AuthInputValidator.ValidateEmail(command.Email);
-        AuthInputValidator.ValidateRequiredField(command.Password, "Парола");
+        await _validator.ValidateAndThrowInvalidOperationAsync(command, cancellationToken);
 
         DateTime now = DateTime.UtcNow;
         bool solvedCaptchaInCurrentAttempt = false;

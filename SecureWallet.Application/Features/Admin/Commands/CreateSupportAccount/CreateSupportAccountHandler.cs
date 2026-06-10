@@ -1,8 +1,9 @@
-﻿using SecureWallet.Application.Features.Admin.DTOs;
-using SecureWallet.Application.Features.Auth.Validators;
+using FluentValidation;
+using SecureWallet.Application.Features.Admin.DTOs;
 using SecureWallet.Application.Features.Wallets;
 using SecureWallet.Application.Interfaces.Repositories;
 using SecureWallet.Application.Interfaces.Security;
+using SecureWallet.Application.Validation;
 using SecureWallet.Domain.Entities;
 
 namespace SecureWallet.Application.Features.Admin.Commands.CreateSupportAccount;
@@ -14,30 +15,23 @@ public class CreateSupportAccountHandler
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly IValidator<CreateSupportAccountCommand> _validator;
 
     public CreateSupportAccountHandler(
         IUserRepository userRepository,
         IRoleRepository roleRepository,
-        IPasswordHasher passwordHasher)
+        IPasswordHasher passwordHasher,
+        IValidator<CreateSupportAccountCommand> validator)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
         _passwordHasher = passwordHasher;
+        _validator = validator;
     }
 
     public async Task<SupportAccountResultDto> Handle(CreateSupportAccountCommand command, CancellationToken cancellationToken = default)
     {
-        IReadOnlyCollection<string> passwordErrors = PasswordValidator.Validate(command.Password);
-        if (passwordErrors.Count > 0)
-        {
-            throw new InvalidOperationException(string.Join(" ", passwordErrors));
-        }
-
-        AuthInputValidator.ValidateEmail(command.Email);
-        AuthInputValidator.ValidateUsername(command.Username);
-        AuthInputValidator.ValidatePersonName(command.FirstName, "Собственото име");
-        AuthInputValidator.ValidatePersonName(command.LastName, "Фамилията");
-        AuthInputValidator.ValidatePhoneNumber(command.PhoneNumber);
+        await _validator.ValidateAndThrowInvalidOperationAsync(command, cancellationToken, combineAllMessages: true);
 
         User? existingUserByEmail = await _userRepository.GetByEmailAsync(command.Email, cancellationToken);
         if (existingUserByEmail is not null)
@@ -54,7 +48,7 @@ public class CreateSupportAccountHandler
         Role? supportRole = await _roleRepository.GetByNameAsync("Support", cancellationToken);
         if (supportRole is null)
         {
-            throw new InvalidOperationException("Ролята Support не беше намерена.");
+            throw new InvalidOperationException("Не беше намерена ролята Support.");
         }
 
         User supportUser = new()
@@ -88,7 +82,7 @@ public class CreateSupportAccountHandler
             Username = supportUser.Username,
             Email = supportUser.Email,
             Role = supportRole.Name,
-            Message = "Support акаунтът беше създаден успешно. При първи login ще се изисква TOTP настройка."
+            Message = "Support акаунтът е създаден. При първи login ще се изисква настройка на временния код."
         };
     }
 }

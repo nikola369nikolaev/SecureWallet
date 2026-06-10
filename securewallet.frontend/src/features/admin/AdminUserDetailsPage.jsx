@@ -30,6 +30,19 @@ function formatTransactionAmount(transaction) {
   return `${prefix}${amount} ${transaction.currency}`;
 }
 
+function formatRoleLabel(role) {
+  switch (role) {
+    case 'Admin':
+      return 'Администратор';
+    case 'Support':
+      return 'Служител support';
+    case 'User':
+      return 'Потребител';
+    default:
+      return role;
+  }
+}
+
 export function AdminUserDetailsPage() {
   const { userId } = useParams();
   const { session, logout } = useAuth();
@@ -102,7 +115,7 @@ export function AdminUserDetailsPage() {
             <p className="eyebrow">Потребителски детайли</p>
             <h1>{isLoading ? 'Зареждане...' : `Акаунт: ${userDetails?.username ?? ''}`}</h1>
             <p className="dashboard-copy">
-              Тук {session?.role === 'Admin' ? 'admin' : 'support'} ролята може да види данните на потребителя, wallet статуса и историята на транзакциите.
+              Тук {session?.role === 'Admin' ? 'администраторът' : 'служителят support'} може да види данните на потребителя, статуса на портфейла и историята на транзакциите.
             </p>
           </div>
           <Link className="secondary-link-button" to="/admin/users">
@@ -138,7 +151,7 @@ export function AdminUserDetailsPage() {
               </div>
               <div>
                 <dt>Роля</dt>
-                <dd>{isLoading ? 'Зареждане...' : userDetails?.role ?? '-'}</dd>
+                <dd>{isLoading ? 'Зареждане...' : formatRoleLabel(userDetails?.role) ?? '-'}</dd>
               </div>
               <div>
                 <dt>Създаден на</dt>
@@ -148,14 +161,14 @@ export function AdminUserDetailsPage() {
           </article>
 
           <article className="dashboard-card">
-            <h2>Сигурност и wallet</h2>
+            <h2>Сигурност и портфейл</h2>
             <dl>
               <div>
                 <dt>Имейл статус</dt>
                 <dd>{isLoading ? 'Зареждане...' : userDetails?.isEmailVerified ? 'Потвърден' : 'Непотвърден'}</dd>
               </div>
               <div>
-                <dt>2FA статус</dt>
+                <dt>Статус на двуфакторната защита</dt>
                 <dd>{isLoading ? 'Зареждане...' : userDetails?.twoFactorEnabled ? 'Включена' : 'Изключена'}</dd>
               </div>
               <div>
@@ -163,7 +176,7 @@ export function AdminUserDetailsPage() {
                 <dd>{isLoading ? 'Зареждане...' : userDetails?.isActive ? 'Да' : 'Не'}</dd>
               </div>
               <div>
-                <dt>Wallet статус</dt>
+                <dt>Статус на портфейла</dt>
                 <dd>{isLoading ? 'Зареждане...' : userDetails?.walletIsActive ? 'Активен' : 'Неактивен'}</dd>
               </div>
               <div>
@@ -171,7 +184,7 @@ export function AdminUserDetailsPage() {
                 <dd>{isLoading ? 'Зареждане...' : userDetails ? formatMoney(userDetails.walletBalance, userDetails.walletCurrency) : '-'}</dd>
               </div>
               <div>
-                <dt>Wallet създаден на</dt>
+                <dt>Портфейлът е създаден на</dt>
                 <dd>{isLoading ? 'Зареждане...' : userDetails?.walletCreatedAtUtc ? formatDate(userDetails.walletCreatedAtUtc) : '-'}</dd>
               </div>
             </dl>

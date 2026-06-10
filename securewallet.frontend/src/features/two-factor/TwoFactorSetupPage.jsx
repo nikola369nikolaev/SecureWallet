@@ -21,15 +21,7 @@ export function TwoFactorSetupPage() {
   const isSecuritySetupRequired = Boolean(session?.securitySetupRequired);
 
   const headerTitle = useMemo(() => {
-    return isSecuritySetupRequired ? 'Последна стъпка: включи двуфакторната защита' : 'Двуфакторна защита с TOTP';
-  }, [isSecuritySetupRequired]);
-
-  const headerCopy = useMemo(() => {
-    if (isSecuritySetupRequired) {
-      return 'Преди да отвориш портфейла си, трябва да сканираш QR кода и да потвърдиш 6-цифрения код от authenticator приложението.';
-    }
-
-    return 'TOTP е безплатен алгоритъм за еднократни кодове и работи с Google Authenticator, Microsoft Authenticator и други подобни приложения.';
+    return isSecuritySetupRequired ? 'Последна стъпка: включи двуфакторната защита' : 'Двуфакторна защита';
   }, [isSecuritySetupRequired]);
 
   useEffect(() => {
@@ -66,7 +58,7 @@ export function TwoFactorSetupPage() {
           return;
         }
 
-        setErrorMessage(error instanceof ApiError ? error.message : 'Възникна грешка при подготовка на TOTP настройката.');
+        setErrorMessage(error instanceof ApiError ? error.message : 'Възникна грешка при подготовка на настройката за временен код.');
       } finally {
         if (isActive) {
           setIsLoading(false);
@@ -118,7 +110,7 @@ export function TwoFactorSetupPage() {
       if (error instanceof ApiError) {
         setErrorMessage(error.payload?.message ?? error.message);
       } else {
-        setErrorMessage('Възникна неочаквана грешка при потвърждаване на TOTP кода.');
+        setErrorMessage('Възникна неочаквана грешка при потвърждаване на временния код.');
       }
     } finally {
       setIsVerifying(false);
@@ -168,7 +160,7 @@ export function TwoFactorSetupPage() {
       if (error instanceof ApiError) {
         setErrorMessage(error.payload?.message ?? error.message);
       } else {
-        setErrorMessage('Възникна неочаквана грешка при подмяна на 2FA настройката.');
+        setErrorMessage('Възникна неочаквана грешка при подмяна на настройката на двуфакторната защита.');
       }
     } finally {
       setIsResetting(false);
@@ -182,7 +174,36 @@ export function TwoFactorSetupPage() {
           <div>
             <p className="eyebrow">Сигурност</p>
             <h1>{headerTitle}</h1>
-            <p className="dashboard-copy">{headerCopy}</p>
+            {isSecuritySetupRequired ? (
+              <p className="dashboard-copy">
+                Преди да отвориш портфейла си, трябва да сканираш QR кода и да потвърдиш
+                {' '}
+                <span className="inline-label-with-info">
+                  <span>временния код</span>
+                  <span className="info-tooltip-badge" tabIndex={0}>
+                    i
+                    <span className="info-tooltip-content">
+                      Това е временен 6-цифрен код от Google Authenticator, Microsoft Authenticator или друго подобно приложение.
+                    </span>
+                  </span>
+                </span>
+                .
+              </p>
+            ) : (
+              <p className="dashboard-copy">
+                <span className="inline-label-with-info">
+                  <span>Временният код</span>
+                  <span className="info-tooltip-badge" tabIndex={0}>
+                    i
+                    <span className="info-tooltip-content">
+                      Това е временен 6-цифрен код от Google Authenticator, Microsoft Authenticator или друго подобно приложение.
+                    </span>
+                  </span>
+                </span>
+                {' '}
+                е 6-цифрен код от Google Authenticator, Microsoft Authenticator или друго подобно приложение.
+              </p>
+            )}
           </div>
 
           {isSecuritySetupRequired ? (
@@ -199,17 +220,25 @@ export function TwoFactorSetupPage() {
         {errorMessage && <div className="message-box message-box--error">{errorMessage}</div>}
         {successMessage && <div className="message-box message-box--success">{successMessage}</div>}
 
-        {isLoading && <div className="dashboard-card">Зареждане на TOTP настройката...</div>}
+        {isLoading && <div className="dashboard-card">Зареждане на настройката за временен код...</div>}
 
         {!isLoading && setupState?.isAlreadyEnabled && !setupState?.canShowQrCode && !isSecuritySetupRequired && (
           <article className="dashboard-card totp-card">
-            <h2>2FA вече е включена</h2>
+            <h2>Двуфакторната защита вече е включена</h2>
             <p className="dashboard-copy">
-              Въведи текущия код от authenticator приложението, ако искаш да изключиш 2FA или да подготвиш нов QR код за същия акаунт.
+              Въведи текущия временен код от приложението, ако искаш да изключиш двуфакторната защита или да подготвиш нов QR код за същия акаунт.
             </p>
 
             <label className="field-group">
-              <span>Текущ authenticator код</span>
+              <span className="inline-label-with-info">
+                <span>Текущ временен код</span>
+                <span className="info-tooltip-badge" tabIndex={0}>
+                  i
+                  <span className="info-tooltip-content">
+                    Това е временен 6-цифрен код от Google Authenticator, Microsoft Authenticator или друго подобно приложение.
+                  </span>
+                </span>
+              </span>
               <input
                 type="text"
                 value={managementCode}
@@ -221,7 +250,7 @@ export function TwoFactorSetupPage() {
 
             <div className="inline-action-row">
               <button className="secondary-button" type="button" onClick={handleDisable} disabled={isDisabling || isResetting}>
-                {isDisabling ? 'Изключване...' : 'Изключи 2FA'}
+                {isDisabling ? 'Изключване...' : 'Изключи двуфакторната защита'}
               </button>
               <button className="primary-button" type="button" onClick={handleReset} disabled={isDisabling || isResetting}>
                 {isResetting ? 'Подготвяне...' : 'Смени устройството / QR кода'}
@@ -235,12 +264,12 @@ export function TwoFactorSetupPage() {
             <article className="dashboard-card totp-card">
               <h2>1. Сканирай QR кода</h2>
               <p className="dashboard-copy">
-                Отвори Google Authenticator или Microsoft Authenticator и сканирай QR кода.
+                Отвори приложението и сканирай QR кода.
               </p>
               <div className="message-box message-box--info">
                 QR кодът се генерира локално и не се изпраща до външен QR сайт с цел сигурност.
               </div>
-              <img className="qr-image" src={setupState.qrCodeImageDataUri} alt="TOTP QR code" />
+              <img className="qr-image" src={setupState.qrCodeImageDataUri} alt="QR код за временен код" />
             </article>
 
             <article className="dashboard-card totp-card">
@@ -249,7 +278,7 @@ export function TwoFactorSetupPage() {
                 Ако не искаш да сканираш QR кода, можеш да въведеш този secret ключ ръчно в приложението.
               </p>
               <div className="secret-code-box">{setupState.manualEntryKey}</div>
-              <p className="field-hint">Запази го внимателно. Това е тайният ключ за този TOTP setup.</p>
+              <p className="field-hint">Запази го внимателно. Това е тайният ключ за настройката на временния код.</p>
             </article>
           </div>
         )}
@@ -263,7 +292,15 @@ export function TwoFactorSetupPage() {
 
             <form className="auth-form" onSubmit={handleVerify}>
               <label className="field-group">
-                <span>Authenticator код</span>
+                <span className="inline-label-with-info">
+                  <span>Временен код</span>
+                  <span className="info-tooltip-badge" tabIndex={0}>
+                    i
+                    <span className="info-tooltip-content">
+                      Това е временен 6-цифрен код от Google Authenticator, Microsoft Authenticator или друго подобно приложение.
+                    </span>
+                  </span>
+                </span>
                 <input
                   type="text"
                   value={verifyCode}

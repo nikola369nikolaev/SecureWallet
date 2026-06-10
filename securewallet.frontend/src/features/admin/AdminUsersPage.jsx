@@ -15,6 +15,19 @@ function formatBooleanStatus(value, positiveText = 'Да', negativeText = 'Не'
   return value ? positiveText : negativeText;
 }
 
+function formatRoleLabel(role) {
+  switch (role) {
+    case 'Admin':
+      return 'Администратор';
+    case 'Support':
+      return 'Служител support';
+    case 'User':
+      return 'Потребител';
+    default:
+      return role;
+  }
+}
+
 const initialSupportForm = {
   username: '',
   email: '',
@@ -159,7 +172,7 @@ export function AdminUsersPage() {
       setUsers(refreshedUsers);
       setForm(initialSupportForm);
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : 'Възникна грешка при създаване на support акаунта.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Възникна грешка при създаване на акаунта на служител support.');
     } finally {
       setIsCreating(false);
     }
@@ -170,12 +183,12 @@ export function AdminUsersPage() {
       <section className="dashboard-shell">
         <div className="dashboard-header">
           <div>
-            <p className="eyebrow">{isAdmin ? 'Администрация' : 'Support преглед'}</p>
-            <h1>{isCreateSupportMode ? 'Създай Support акаунт' : 'Регистрирани потребители'}</h1>
+            <p className="eyebrow">{isAdmin ? 'Администрация' : 'Преглед на служител support'}</p>
+            <h1>{isCreateSupportMode ? 'Създай акаунт на служител support' : 'Регистрирани потребители'}</h1>
             <p className="dashboard-copy">
               {isCreateSupportMode
-                ? 'Тук admin ролята създава support акаунти. Валидацията за дублиран имейл и потребителско име се прави в backend-а.'
-                : `Тук ${isAdmin ? 'admin' : 'support'} ролята вижда позволените акаунти и може да отвори детайлите и историята на конкретен потребител.`}
+                ? 'Тук администраторът създава акаунти на служител support. Валидацията за дублиран имейл и потребителско име се прави в backend-а.'
+                : `Тук ${isAdmin ? 'администраторът' : 'служителят support'} вижда позволените акаунти и може да отвори детайлите и историята на конкретен потребител.`}
             </p>
           </div>
           <Link className="secondary-link-button" to="/dashboard">
@@ -230,7 +243,7 @@ export function AdminUsersPage() {
               </label>
 
               <button className="primary-button" disabled={isCreating} type="submit">
-                {isCreating ? 'Създаване...' : 'Създай support акаунт'}
+                {isCreating ? 'Създаване...' : 'Създай акаунт на служител support'}
               </button>
             </form>
           </article>
@@ -259,7 +272,7 @@ export function AdminUsersPage() {
                       <th>Имейл</th>
                       <th>Роля</th>
                       <th>Имейл статус</th>
-                      <th>2FA</th>
+                      <th>Двуфакторна защита</th>
                       <th>Активен</th>
                       <th>Създаден на</th>
                       <th>Детайли</th>
@@ -270,7 +283,7 @@ export function AdminUsersPage() {
                       <tr key={user.userId}>
                         <td>{user.username}{user.userId === currentUserId ? ' (аз)' : ''}</td>
                         <td>{user.email}</td>
-                        <td>{user.role}</td>
+                        <td>{formatRoleLabel(user.role)}</td>
                         <td>{formatBooleanStatus(user.isEmailVerified, 'Потвърден', 'Непотвърден')}</td>
                         <td>{formatBooleanStatus(user.twoFactorEnabled, 'Включена', 'Изключена')}</td>
                         <td>{formatBooleanStatus(user.isActive, 'Да', 'Не')}</td>

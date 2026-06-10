@@ -61,6 +61,11 @@ function AdminRoute() {
   return session?.role === 'Admin' ? <Outlet /> : <Navigate to="/dashboard" replace />;
 }
 
+function NonAdminFinancialRoute() {
+  const { session } = useAuth();
+  return session?.role === 'Admin' ? <Navigate to="/dashboard" replace /> : <Outlet />;
+}
+
 export function AppRouter() {
   return (
     <BrowserRouter>
@@ -81,7 +86,9 @@ export function AppRouter() {
 
         <Route element={<CompletedSecurityRoute />}>
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/transfers" element={<TransferPage />} />
+          <Route element={<NonAdminFinancialRoute />}>
+            <Route path="/transfers" element={<TransferPage />} />
+          </Route>
           <Route path="/transactions" element={<TransactionHistoryPage />} />
           <Route path="/settings" element={<SettingsPage />} />
 

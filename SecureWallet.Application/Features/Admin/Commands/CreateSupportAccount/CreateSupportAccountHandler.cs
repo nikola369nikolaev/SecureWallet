@@ -9,6 +9,8 @@ namespace SecureWallet.Application.Features.Admin.Commands.CreateSupportAccount;
 
 public class CreateSupportAccountHandler
 {
+    private const decimal InitialSupportOperationalBalance = 1000m;
+
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
     private readonly IPasswordHasher _passwordHasher;
@@ -71,7 +73,7 @@ public class CreateSupportAccountHandler
         Wallet wallet = new()
         {
             UserId = supportUser.Id,
-            Balance = 0m,
+            Balance = InitialSupportOperationalBalance,
             Currency = "EUR",
             IsActive = true
         };

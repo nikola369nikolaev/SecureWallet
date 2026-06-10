@@ -41,6 +41,12 @@ public class TransactionsController : ControllerBase
         [FromBody] CreateDepositRequest request,
         CancellationToken cancellationToken)
     {
+        ObjectResult? financialAccessResult = EnsureFinancialAccess();
+        if (financialAccessResult is not null)
+        {
+            return financialAccessResult;
+        }
+
         ObjectResult? securityResult = EnsureCompletedSecuritySetup();
         if (securityResult is not null)
         {
@@ -51,6 +57,10 @@ public class TransactionsController : ControllerBase
         {
             return Unauthorized();
         }
+
+        string currentUserEmail = User.FindFirstValue(ClaimTypes.Email)
+            ?? User.FindFirstValue("email")
+            ?? "unknown";
 
         CreateDepositCommand command = new()
         {
@@ -63,17 +73,19 @@ public class TransactionsController : ControllerBase
         {
             DepositResultDto result = await _createDepositHandler.Handle(command, cancellationToken);
             _logger.LogInformation(
-                "Транзакции: потребител {UserId} направи депозит за {Amount}.",
-                userId,
-                request.Amount);
+                "Транзакции: потребител с имейл {Email} направи депозит за {Amount}. UserId={UserId}.",
+                currentUserEmail,
+                request.Amount,
+                userId);
             return Ok(result);
         }
         catch (InvalidOperationException exception)
         {
             _logger.LogWarning(
-                "Транзакции: неуспешен депозит за потребител {UserId} за {Amount}: {Reason}",
-                userId,
+                "Транзакции: неуспешен депозит за имейл {Email} за {Amount}. UserId={UserId}. Причина: {Reason}",
+                currentUserEmail,
                 request.Amount,
+                userId,
                 exception.Message);
             return BadRequest(new { message = exception.Message });
         }
@@ -88,6 +100,12 @@ public class TransactionsController : ControllerBase
         [FromBody] CreateTransferRequest request,
         CancellationToken cancellationToken)
     {
+        ObjectResult? financialAccessResult = EnsureFinancialAccess();
+        if (financialAccessResult is not null)
+        {
+            return financialAccessResult;
+        }
+
         ObjectResult? securityResult = EnsureCompletedSecuritySetup();
         if (securityResult is not null)
         {
@@ -204,6 +222,19 @@ public class TransactionsController : ControllerBase
             return StatusCode(StatusCodes.Status403Forbidden, new
             {
                 message = "Първо завърши настройката на двуфакторната защита, за да използваш преводи и история."
+            });
+        }
+
+        return null;
+    }
+
+    private ObjectResult? EnsureFinancialAccess()
+    {
+        if (User.IsInRole("Admin"))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                message = "Администраторският акаунт няма право да извършва финансови операции."
             });
         }
 

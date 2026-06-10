@@ -4,32 +4,158 @@ import { getAdminLogs } from '../../api/adminApi';
 import { ApiError } from '../../api/httpClient';
 import { useAuth } from '../../auth/AuthContext';
 
+function isHttpLogLine(line) {
+  return line.includes('HTTP ') && line.includes('->');
+}
+
+function isInvalidCredentialWarningLine(line) {
+  const lowerLine = line.toLowerCase();
+
+  return lowerLine.includes('вход: защитна проверка за имейл') &&
+    lowerLine.includes('грешен имейл или парола');
+}
+
+function isLockoutSecurityLine(line) {
+  const lowerLine = line.toLowerCase();
+
+  return lowerLine.includes('stage=lockoutactive') ||
+    lowerLine.includes('lockoutseconds=') ||
+    lowerLine.includes('твърде много неуспешни опити за вход') ||
+    lowerLine.includes('опитай отново след');
+}
+
+function getSecurityAttemptCount(line) {
+  const attemptsMatch = line.match(/Attempts=(\d+)/i);
+
+  if (attemptsMatch) {
+    return Number(attemptsMatch[1]);
+  }
+
+  const failedAttemptMatch = line.match(/опит номер:\s*(\d+)/i);
+
+  if (failedAttemptMatch) {
+    return Number(failedAttemptMatch[1]);
+  }
+
+  return null;
+}
+
+function isCriticalSecurityLogLine(line) {
+  if (isLockoutSecurityLine(line)) {
+    return true;
+  }
+
+  const attemptCount = getSecurityAttemptCount(line);
+
+  if (attemptCount !== null && attemptCount >= 5) {
+    return true;
+  }
+
+  if (isInvalidCredentialWarningLine(line)) {
+    return false;
+  }
+
+  const lowerLine = line.toLowerCase();
+
+  if (line.includes('[FTL]') || line.includes('[ERR]')) {
+    return true;
+  }
+
+  if (!line.includes('[WRN]')) {
+    return false;
+  }
+
+  return [
+    'грешна парола',
+    'невалидна парола',
+    'невалиден код',
+    'captcha',
+    'капча',
+    'lockout',
+    'блок',
+    'неуспеш',
+    'reset',
+    'ресет',
+    'парола',
+    'ddos',
+    'подозр',
+  ].some((keyword) => lowerLine.includes(keyword));
+}
+
+function isActionLogLine(line) {
+  if (isHttpLogLine(line) || isCriticalSecurityLogLine(line) || isInvalidCredentialWarningLine(line)) {
+    return false;
+  }
+
+  const lowerLine = line.toLowerCase();
+
+  return [
+    'транзакции:',
+    'администрация:',
+    'вход:',
+    'регистрация:',
+    'totp',
+    'email verification',
+    'имейл',
+    'refresh',
+    'парола:',
+  ].some((keyword) => lowerLine.includes(keyword));
+}
+
+function getAuditLinePresentation(line) {
+  if (isInvalidCredentialWarningLine(line)) {
+    return {
+      rowClassName: 'audit-entry audit-entry--warning',
+      badgeClassName: 'audit-badge audit-badge--warning',
+      badgeText: 'Опит',
+    };
+  }
+
+  if (isCriticalSecurityLogLine(line)) {
+    return {
+      rowClassName: 'audit-entry audit-entry--critical',
+      badgeClassName: 'audit-badge audit-badge--critical',
+      badgeText: 'Критично',
+    };
+  }
+
+  if (isActionLogLine(line)) {
+    return {
+      rowClassName: 'audit-entry audit-entry--action',
+      badgeClassName: 'audit-badge audit-badge--action',
+      badgeText: 'Действие',
+    };
+  }
+
+  if (line.includes('[WRN]') || line.toLowerCase().includes('причина=')) {
+    return {
+      rowClassName: 'audit-entry audit-entry--warning',
+      badgeClassName: 'audit-badge audit-badge--warning',
+      badgeText: 'Предупр.',
+    };
+  }
+
+  if (isHttpLogLine(line)) {
+    return {
+      rowClassName: 'audit-entry audit-entry--http',
+      badgeClassName: 'audit-badge audit-badge--http',
+      badgeText: 'HTTP',
+    };
+  }
+
+  return {
+    rowClassName: 'audit-entry audit-entry--neutral',
+    badgeClassName: 'audit-badge audit-badge--neutral',
+    badgeText: 'Лог',
+  };
+}
+
 export function AdminLogsPage() {
   const { session, logout } = useAuth();
   const navigate = useNavigate();
   const [logResult, setLogResult] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
-
-  function getLogLineClassName(line) {
-    if (line.includes('[FTL]')) {
-      return 'log-line log-line--fatal';
-    }
-
-    if (line.includes('[ERR]')) {
-      return 'log-line log-line--error';
-    }
-
-    if (line.includes('[WRN]')) {
-      return 'log-line log-line--warning';
-    }
-
-    if (line.includes('[INF]')) {
-      return 'log-line log-line--info';
-    }
-
-    return 'log-line';
-  }
 
   function handleDownloadLogs() {
     if (!logResult?.lines?.length) {
@@ -66,7 +192,7 @@ export function AdminLogsPage() {
       setErrorMessage('');
 
       try {
-        const result = await getAdminLogs(session.accessToken, 200);
+        const result = await getAdminLogs(session.accessToken, 1000);
 
         if (!isActive) {
           return;
@@ -111,7 +237,7 @@ export function AdminLogsPage() {
     setErrorMessage('');
 
     try {
-      const result = await getAdminLogs(session.accessToken, 200);
+      const result = await getAdminLogs(session.accessToken, 1000);
       setLogResult(result);
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
@@ -183,11 +309,16 @@ export function AdminLogsPage() {
           ) : (
             <div className="log-viewer-shell">
               <div className="log-viewer-output">
-                {logResult.lines.map((line, index) => (
-                  <div className={getLogLineClassName(line)} key={`${index}-${line}`}>
-                    {line}
-                  </div>
-                ))}
+                {logResult.lines.map((line, index) => {
+                  const presentation = getAuditLinePresentation(line);
+
+                  return (
+                    <div className={presentation.rowClassName} key={`${index}-${line}`}>
+                      <span className={presentation.badgeClassName}>{presentation.badgeText}</span>
+                      <span className="audit-entry__text">{line}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -196,3 +327,4 @@ export function AdminLogsPage() {
     </main>
   );
 }
+

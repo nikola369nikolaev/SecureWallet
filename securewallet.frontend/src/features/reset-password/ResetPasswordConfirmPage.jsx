@@ -4,6 +4,7 @@ import { completePasswordReset } from '../../api/authApi';
 import { ApiError } from '../../api/httpClient';
 import { useAuth } from '../../auth/AuthContext';
 import { createSessionFromAuthResult } from '../../auth/sessionStorage';
+import { AppBrand } from '../../components/AppBrand';
 
 const RESET_SESSION_STORAGE_KEY = 'securewallet.auth.passwordReset';
 
@@ -105,7 +106,7 @@ export function ResetPasswordConfirmPage() {
   return (
     <main className="auth-page auth-page--register">
       <section className="hero-panel hero-panel--warm">
-        <p className="eyebrow">SecureWallet</p>
+        <AppBrand subtitle="Смяна на парола" />
         <h1>Задай новата парола на потвърдения акаунт.</h1>
         <p className="hero-copy">
           Сега вече сменяш старата парола точно на акаунта с имейл <strong>{resetSession?.email ?? '-'}</strong>.
@@ -174,3 +175,7 @@ export function ResetPasswordConfirmPage() {
     </main>
   );
 }
+
+
+
+

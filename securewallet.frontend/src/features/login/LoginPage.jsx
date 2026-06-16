@@ -4,6 +4,7 @@ import { loginUser, resendEmailVerificationCode, verifyEmailCode } from '../../a
 import { ApiError } from '../../api/httpClient';
 import { useAuth } from '../../auth/AuthContext';
 import { createSessionFromAuthResult } from '../../auth/sessionStorage';
+import { AppBrand } from '../../components/AppBrand';
 import { CaptchaImage } from '../../components/CaptchaImage';
 
 const SESSION_EXPIRED_KEY = 'securewallet.auth.sessionExpired';
@@ -160,22 +161,8 @@ export function LoginPage() {
   return (
     <main className="auth-page auth-page--login">
       <section className="hero-panel">
-        <p className="eyebrow">SecureWallet</p>
+        <AppBrand />
         <h1>Влез в своя защитен дигитален портфейл.</h1>
-        <p className="hero-copy">
-          Тук тестваш входа, captcha защитата, временния код от Microsoft/Google Authenticator приложението
-          и поведението на системата при временен lockout след грешни опити.
-        </p>
-        <div className="hero-note-grid">
-          <div className="hero-note">
-            <strong>Имейл и парола</strong>
-            <span>Първо проверяваме имейла, паролата и дали акаунтът вече е потвърдил имейла си.</span>
-          </div>
-          <div className="hero-note">
-            <strong>Captcha и двуфакторна защита</strong>
-            <span>При нужда системата иска captcha и след това временен код от Microsoft/Google Authenticator приложението.</span>
-          </div>
-        </div>
       </section>
 
       <section className="form-panel">

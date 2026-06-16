@@ -1,4 +1,4 @@
-using FluentValidation;
+﻿using FluentValidation;
 using SecureWallet.Application.Features.Admin.Commands.CreateSupportAccount;
 using SecureWallet.Application.Validation;
 
@@ -34,8 +34,11 @@ public class CreateSupportAccountCommandValidator : AbstractValidator<CreateSupp
             .Must(FluentValidationRuleExtensions.HasNoLeadingOrTrailingWhitespace).WithMessage(FluentValidationRuleExtensions.NoWhitespaceMessage("Фамилията"))
             .Must(FluentValidationRuleExtensions.HasNoDigits).WithMessage(FluentValidationRuleExtensions.NameNoDigitsMessage("Фамилията"));
 
-        RuleFor(command => command.PhoneNumber)
-            .NotEmpty().WithMessage(FluentValidationRuleExtensions.RequiredMessage("Телефонният номер"))
-            .Must(FluentValidationRuleExtensions.IsValidPhoneNumber).WithMessage(FluentValidationRuleExtensions.PhoneRulesMessage());
+        When(command => !string.IsNullOrWhiteSpace(command.PhoneNumber), () =>
+        {
+            RuleFor(command => command.PhoneNumber)
+                .Must(FluentValidationRuleExtensions.IsValidPhoneNumber)
+                .WithMessage(FluentValidationRuleExtensions.PhoneRulesMessage());
+        });
     }
 }

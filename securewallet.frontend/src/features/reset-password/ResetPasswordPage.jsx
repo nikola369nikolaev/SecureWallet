@@ -2,6 +2,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { requestPasswordResetCode, verifyPasswordResetCode } from '../../api/authApi';
 import { ApiError } from '../../api/httpClient';
+import { AppBrand } from '../../components/AppBrand';
 
 const RESET_SESSION_STORAGE_KEY = 'securewallet.auth.passwordReset';
 
@@ -86,7 +87,7 @@ export function ResetPasswordPage() {
   return (
     <main className="auth-page auth-page--register">
       <section className="hero-panel hero-panel--warm">
-        <p className="eyebrow">SecureWallet</p>
+        <AppBrand subtitle="Възстановяване на достъп" />
         <h1>Върни достъпа до профила си чрез телефон и SMS код.</h1>
         <p className="hero-copy">
           За да смениш паролата, първо трябва да докажеш, че имейлът и телефонът принадлежат на един и същ акаунт.
@@ -175,3 +176,7 @@ export function ResetPasswordPage() {
     </main>
   );
 }
+
+
+
+

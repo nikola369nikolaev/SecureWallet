@@ -2,6 +2,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { registerUser } from '../../api/authApi';
 import { ApiError } from '../../api/httpClient';
+import { AppBrand } from '../../components/AppBrand';
 
 const BG_PHONE_PREFIX = '+359';
 const BG_PHONE_DIGITS_LENGTH = 9;
@@ -128,7 +129,7 @@ export function RegisterPage() {
   return (
     <main className="auth-page auth-page--register">
       <section className="hero-panel hero-panel--warm">
-        <p className="eyebrow">SecureWallet</p>
+        <AppBrand />
         <h1>Създай профил и влез в своя дигитален портфейл.</h1>
         <p className="hero-copy">
           След регистрация ще получиш код за потвърждение на имейла, а след това ще преминеш
@@ -286,3 +287,6 @@ export function RegisterPage() {
     </main>
   );
 }
+
+
+

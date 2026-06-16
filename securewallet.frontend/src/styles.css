@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   font-family: 'Segoe UI Variable Text', 'Trebuchet MS', sans-serif;
   color: #f6efe7;
   background:
@@ -135,6 +135,51 @@ a {
   letter-spacing: 0.18em;
   font-size: 0.78rem;
   color: var(--accent-soft);
+}
+
+.brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.75rem;
+  width: fit-content;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.brand-lockup__logo {
+  width: 280px;
+  height: 280px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 14px 28px rgba(249, 115, 22, 0.22));
+}
+
+.dashboard-header .brand-lockup__logo {
+  width: 104px;
+  height: 104px;
+}
+
+.brand-lockup__text {
+  display: grid;
+  gap: 0.16rem;
+}
+
+.brand-lockup__name {
+  color: var(--text-main);
+  font-family: 'Palatino Linotype', 'Book Antiqua', serif;
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.brand-lockup__subtitle {
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .hero-note-grid,
@@ -492,6 +537,11 @@ a {
   gap: 1rem;
   align-items: flex-start;
   margin-bottom: 2rem;
+}
+
+.dashboard-header__intro {
+  display: grid;
+  gap: 0.9rem;
 }
 
 .dashboard-card dl {
@@ -1031,3 +1081,5 @@ a {
     width: fit-content;
   }
 }
+
+

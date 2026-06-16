@@ -10,7 +10,8 @@ public class LoginUserCommandValidator : AbstractValidator<LoginUserCommand>
     {
         RuleFor(command => command.Email)
             .NotEmpty().WithMessage(FluentValidationRuleExtensions.RequiredMessage("Имейл"))
-            .Must(FluentValidationRuleExtensions.HasNoLeadingOrTrailingWhitespace).WithMessage(FluentValidationRuleExtensions.NoWhitespaceMessage("Имейл"))
+            .Must(FluentValidationRuleExtensions.HasNoLeadingOrTrailingWhitespace)
+            .WithMessage(FluentValidationRuleExtensions.NoWhitespaceMessage("Имейл"))
             .Must(FluentValidationRuleExtensions.IsValidEmail).WithMessage(FluentValidationRuleExtensions.EmailFormatMessage());
 
         RuleFor(command => command.Password)

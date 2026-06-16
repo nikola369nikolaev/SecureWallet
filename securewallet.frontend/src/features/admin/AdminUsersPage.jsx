@@ -69,6 +69,7 @@ export function AdminUsersPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   const isAdmin = session?.role === 'Admin';
   const isCreateSupportMode = isAdmin && location.hash === '#create-support';
@@ -201,7 +202,7 @@ export function AdminUsersPage() {
 
         {isCreateSupportMode ? (
           <article className="dashboard-card admin-form-card">
-            <form className="auth-form admin-inline-form" onSubmit={handleCreateSupportAccount}>
+            <form className="auth-form admin-inline-form" onSubmit={handleCreateSupportAccount} noValidate>
               <label className="field-group">
                 <span>Потребителско име</span>
                 <input
@@ -224,7 +225,22 @@ export function AdminUsersPage() {
 
               <label className="field-group">
                 <span>Парола</span>
-                <input value={form.password} onChange={(event) => handleFormChange('password', event.target.value)} type="password" />
+                <div className="password-input-wrapper">
+                  <input
+                    value={form.password}
+                    onChange={(event) => handleFormChange('password', event.target.value)}
+                    type={isPasswordVisible ? 'text' : 'password'}
+                  />
+                  <button
+                    className="password-toggle-button"
+                    type="button"
+                    onClick={() => setIsPasswordVisible((current) => !current)}
+                    aria-label={isPasswordVisible ? 'Скрий паролата' : 'Покажи паролата'}
+                    title={isPasswordVisible ? 'Скрий паролата' : 'Покажи паролата'}
+                  >
+                    👁
+                  </button>
+                </div>
               </label>
 
               <label className="field-group">

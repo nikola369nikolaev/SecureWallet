@@ -4,6 +4,7 @@ import { resendEmailVerificationCode, verifyEmailCode } from '../../api/authApi'
 import { ApiError } from '../../api/httpClient';
 import { useAuth } from '../../auth/AuthContext';
 import { createSessionFromAuthResult } from '../../auth/sessionStorage';
+import { AppBrand } from '../../components/AppBrand';
 
 const RESEND_COOLDOWN_SECONDS = 15;
 
@@ -86,7 +87,7 @@ export function VerifyEmailPage() {
   return (
     <main className="auth-page auth-page--register">
       <section className="hero-panel hero-panel--warm">
-        <p className="eyebrow">Потвърждение</p>
+        <AppBrand subtitle="Имейл потвърждение" />
         <h1>Потвърди имейла си</h1>
         <p className="hero-copy">
           Изпратихме код за потвърждение. След успешния код ще преминеш към настройката на
@@ -151,3 +152,6 @@ export function VerifyEmailPage() {
     </main>
   );
 }
+
+
+

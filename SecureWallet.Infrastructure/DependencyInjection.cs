@@ -16,8 +16,11 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        string defaultConnection = configuration.GetConnectionString("DefaultConnection")
+            ?? throw new InvalidOperationException("Не беше намерен connection string 'DefaultConnection'.");
+
         services.AddDbContext<AppDbContext>(options =>
-            options.UseInMemoryDatabase("SecureWalletDb"));
+            options.UseNpgsql(defaultConnection));
 
         services.Configure<EmailOptions>(configuration.GetSection("Email"));
 

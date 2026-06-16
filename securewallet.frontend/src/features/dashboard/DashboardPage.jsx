@@ -5,6 +5,7 @@ import { getCurrentWallet } from '../../api/walletApi';
 import { createDeposit, getTransactionHistoryPage } from '../../api/transactionApi';
 import { ApiError } from '../../api/httpClient';
 import { useAuth } from '../../auth/AuthContext';
+import { AppBrand } from '../../components/AppBrand';
 
 function formatStatus(value) {
   return value ? 'Потвърден' : 'Непотвърден';
@@ -487,7 +488,8 @@ export function DashboardPage() {
     <main className="dashboard-page">
       <section className="dashboard-shell">
         <div className="dashboard-header">
-          <div>
+          <div className="dashboard-header__intro">
+            <AppBrand subtitle="Защитен дигитален портфейл" />
             <p className="eyebrow">Начало</p>
             <h1>Добре дошъл, {wallet?.username ?? session?.username}</h1>
           </div>

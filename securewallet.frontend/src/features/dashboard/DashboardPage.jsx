@@ -950,7 +950,7 @@ export function DashboardPage() {
                       </select>
                     </label>
                   </div>
-                  <p className="field-hint">Избери месец, за да видиш справката, подготвена от backend-а.</p>
+                  <p className="field-hint"></p>
 
                   <div className="dashboard-summary-grid">
                     <div className="dashboard-summary-tile">

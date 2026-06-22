@@ -42,6 +42,34 @@ function formatCardExpiry(value) {
   }).format(new Date(value));
 }
 
+async function tryCopyWithClipboardApi(value) {
+  if (!navigator.clipboard || !window.isSecureContext) {
+    return false;
+  }
+
+  await navigator.clipboard.writeText(value);
+  return true;
+}
+
+function tryCopyWithTextareaFallback(value) {
+  const textArea = document.createElement('textarea');
+  textArea.value = value;
+  textArea.setAttribute('readonly', '');
+  textArea.style.position = 'fixed';
+  textArea.style.top = '-9999px';
+  textArea.style.left = '-9999px';
+
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+
+  try {
+    return document.execCommand('copy');
+  } finally {
+    document.body.removeChild(textArea);
+  }
+}
+
 export function SettingsPage() {
   const { session, logout } = useAuth();
   const navigate = useNavigate();
@@ -115,7 +143,15 @@ export function SettingsPage() {
     setErrorMessage('');
 
     try {
-      await navigator.clipboard.writeText(value);
+      const copiedWithClipboardApi = await tryCopyWithClipboardApi(value)
+        .catch(() => false);
+
+      const copied = copiedWithClipboardApi || tryCopyWithTextareaFallback(value);
+
+      if (!copied) {
+        throw new Error('Copy failed.');
+      }
+
       setSuccessMessage(`${label} беше копиран успешно.`);
     } catch {
       setSuccessMessage('');

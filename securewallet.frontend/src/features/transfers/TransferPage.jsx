@@ -46,6 +46,7 @@ export function TransferPage() {
   const [transferTotpCode, setTransferTotpCode] = useState('');
   const [pendingTransferPayload, setPendingTransferPayload] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
+  const [confirmErrorMessage, setConfirmErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [transferReference, setTransferReference] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -113,6 +114,7 @@ export function TransferPage() {
   function openTransferConfirmation(event) {
     event?.preventDefault();
     setErrorMessage('');
+    setConfirmErrorMessage('');
     setSuccessMessage('');
     setTransferReference('');
 
@@ -127,6 +129,11 @@ export function TransferPage() {
 
     if (!Number.isFinite(amount) || amount <= 0) {
       setErrorMessage('Сумата трябва да е по-голяма от 0.');
+      return;
+    }
+
+    if (wallet && amount > wallet.balance) {
+      setErrorMessage('Нямаш достатъчен баланс за този превод.');
       return;
     }
 
@@ -147,6 +154,7 @@ export function TransferPage() {
 
     setIsConfirmModalOpen(false);
     setTransferTotpCode('');
+    setConfirmErrorMessage('');
     setPendingTransferPayload(null);
   }
 
@@ -156,6 +164,7 @@ export function TransferPage() {
     }
 
     setErrorMessage('');
+    setConfirmErrorMessage('');
     setSuccessMessage('');
     setTransferReference('');
     setIsSubmitting(true);
@@ -200,9 +209,9 @@ export function TransferPage() {
           return;
         }
 
-        setErrorMessage(error.payload?.message ?? error.message);
+        setConfirmErrorMessage(error.payload?.message ?? error.message);
       } else {
-        setErrorMessage('Възникна проблем при изпращане на превода. Опитай отново.');
+        setConfirmErrorMessage('Възникна проблем при изпращане на превода. Опитай отново.');
       }
     } finally {
       setIsSubmitting(false);
@@ -371,6 +380,8 @@ export function TransferPage() {
                   inputMode="numeric"
                 />
               </label>
+
+              {confirmErrorMessage && <div className="message-box message-box--error">{confirmErrorMessage}</div>}
 
               <div className="inline-action-row">
                 <button className="primary-button" type="button" onClick={handleConfirmTransfer} disabled={isSubmitting}>

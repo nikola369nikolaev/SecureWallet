@@ -1,4 +1,5 @@
-using FluentValidation;
+﻿using FluentValidation;
+using Microsoft.Extensions.Logging;
 using SecureWallet.Application.Features.Auth.DTOs;
 using SecureWallet.Application.Features.Wallets;
 using SecureWallet.Application.Interfaces.Repositories;
@@ -17,19 +18,22 @@ public class RegisterUserHandler
     private readonly IPasswordHasher _passwordHasher;
     private readonly IEmailVerificationSender _emailVerificationSender;
     private readonly IValidator<RegisterUserCommand> _validator;
+    private readonly ILogger<RegisterUserHandler> _logger;
 
     public RegisterUserHandler(
         IUserRepository userRepository,
         IRoleRepository roleRepository,
         IPasswordHasher passwordHasher,
         IEmailVerificationSender emailVerificationSender,
-        IValidator<RegisterUserCommand> validator)
+        IValidator<RegisterUserCommand> validator,
+        ILogger<RegisterUserHandler> logger)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
         _passwordHasher = passwordHasher;
         _emailVerificationSender = emailVerificationSender;
         _validator = validator;
+        _logger = logger;
     }
 
     public async Task<RegisterResultDto> Handle(RegisterUserCommand command, CancellationToken cancellationToken = default)
@@ -54,7 +58,8 @@ public class RegisterUserHandler
         Role? userRole = await _roleRepository.GetByNameAsync("User", cancellationToken);
         if (userRole is null)
         {
-            throw new InvalidOperationException("Не беше намерена ролята User.");
+            _logger.LogError("Регистрацията се провали, защото не беше намерена ролята 'User'.");
+            throw new InvalidOperationException("Възникна проблем. Опитай по-късно.");
         }
 
         string emailVerificationCode = GenerateVerificationCode();

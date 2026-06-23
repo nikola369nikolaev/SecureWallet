@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using SecureWallet.Application.Features.Auth;
 using SecureWallet.Application.Interfaces.Security;
@@ -12,10 +13,12 @@ namespace SecureWallet.Infrastructure.Security;
 public class JwtTokenService : IJwtTokenService
 {
     private readonly IConfiguration _configuration;
+    private readonly ILogger<JwtTokenService> _logger;
 
-    public JwtTokenService(IConfiguration configuration)
+    public JwtTokenService(IConfiguration configuration, ILogger<JwtTokenService> logger)
     {
         _configuration = configuration;
+        _logger = logger;
     }
 
     public string GenerateAccessToken(User user, bool securitySetupRequired = false)
@@ -108,11 +111,11 @@ public class JwtTokenService : IJwtTokenService
     private int GetAccessTokenExpirationMinutes()
     {
         string expirationMinutesValue = _configuration["Jwt:AccessTokenExpirationMinutes"]
-            ?? throw new InvalidOperationException("Не е намерена настройка за живота на JWT сесията.");
+            ?? throw CreateConfigurationException("Не е намерена настройката Jwt:AccessTokenExpirationMinutes.");
 
         if (!int.TryParse(expirationMinutesValue, out int expirationMinutes))
         {
-            throw new InvalidOperationException("Стойността за живота на JWT сесията е невалидна.");
+            throw CreateConfigurationException("Стойността на Jwt:AccessTokenExpirationMinutes е невалидна.");
         }
 
         return expirationMinutes;
@@ -121,18 +124,24 @@ public class JwtTokenService : IJwtTokenService
     private string GetJwtKey()
     {
         return _configuration["Jwt:Key"]
-            ?? throw new InvalidOperationException("Не е намерен ключът за JWT.");
+            ?? throw CreateConfigurationException("Не е намерена настройката Jwt:Key.");
     }
 
     private string GetJwtIssuer()
     {
         return _configuration["Jwt:Issuer"]
-            ?? throw new InvalidOperationException("Не е намерен issuer-ът за JWT.");
+            ?? throw CreateConfigurationException("Не е намерена настройката Jwt:Issuer.");
     }
 
     private string GetJwtAudience()
     {
         return _configuration["Jwt:Audience"]
-            ?? throw new InvalidOperationException("Не е намерена audience стойността за JWT.");
+            ?? throw CreateConfigurationException("Не е намерена настройката Jwt:Audience.");
+    }
+
+    private InvalidOperationException CreateConfigurationException(string details)
+    {
+        _logger.LogError("Грешка в JWT конфигурацията: {Details}", details);
+        return new InvalidOperationException("Услугата временно не е достъпна. Опитай по-късно.");
     }
 }

@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using SecureWallet.Application.Interfaces.Security;
 
 namespace SecureWallet.Infrastructure.Security;
@@ -11,6 +12,12 @@ public class TotpService : ITotpService
     private const int TotpDigits = 6;
     private const int TotpPeriodSeconds = 30;
     private const int AllowedTimeStepDrift = 1;
+    private readonly ILogger<TotpService> _logger;
+
+    public TotpService(ILogger<TotpService> logger)
+    {
+        _logger = logger;
+    }
 
     public string GenerateSecret()
     {
@@ -105,7 +112,7 @@ public class TotpService : ITotpService
         return result.ToString();
     }
 
-    private static byte[] DecodeBase32(string input)
+    private byte[] DecodeBase32(string input)
     {
         string normalizedInput = input
             .Trim()
@@ -122,7 +129,8 @@ public class TotpService : ITotpService
             int index = Base32Alphabet.IndexOf(character);
             if (index < 0)
             {
-                throw new InvalidOperationException("TOTP secret contains invalid Base32 characters.");
+                _logger.LogError("Тайната за временния код съдържа невалидни Base32 символи.");
+                throw new InvalidOperationException("Възникна проблем. Опитай по-късно.");
             }
 
             buffer = (buffer << 5) | index;

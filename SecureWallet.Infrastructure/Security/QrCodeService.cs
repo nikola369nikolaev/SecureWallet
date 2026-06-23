@@ -1,4 +1,5 @@
 using System.Text;
+using Microsoft.Extensions.Logging;
 using QRCoder;
 using SecureWallet.Application.Interfaces.Security;
 
@@ -6,11 +7,19 @@ namespace SecureWallet.Infrastructure.Security;
 
 public class QrCodeService : IQrCodeService
 {
+    private readonly ILogger<QrCodeService> _logger;
+
+    public QrCodeService(ILogger<QrCodeService> logger)
+    {
+        _logger = logger;
+    }
+
     public string GenerateSvgDataUri(string content)
     {
         if (string.IsNullOrWhiteSpace(content))
         {
-            throw new InvalidOperationException("QR code content cannot be empty.");
+            _logger.LogError("Генерирането на QR код се провали, защото входният текст е празен.");
+            throw new InvalidOperationException("Възникна проблем. Опитай по-късно.");
         }
 
         using QRCodeGenerator generator = new();

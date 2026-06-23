@@ -42,7 +42,7 @@ export function ResetPasswordPage() {
       setSuccessMessage(result.message ?? 'SMS кодът беше изпратен успешно.');
     } catch (error) {
       if (error instanceof ApiError) {
-        setErrorMessage(error.payload?.message ?? error.message);
+        setErrorMessage(error.message);
       } else {
         setErrorMessage('Възникна проблем при изпращане на SMS кода. Опитай отново.');
       }
@@ -75,7 +75,7 @@ export function ResetPasswordPage() {
       navigate('/reset-password/confirm', { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
-        setErrorMessage(error.payload?.message ?? error.message);
+        setErrorMessage(error.message);
       } else {
         setErrorMessage('Възникна проблем при проверка на SMS кода. Опитай отново.');
       }

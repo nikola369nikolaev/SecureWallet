@@ -1,4 +1,5 @@
-using FluentValidation;
+﻿using FluentValidation;
+using Microsoft.Extensions.Logging;
 using SecureWallet.Application.Features.Admin.DTOs;
 using SecureWallet.Application.Features.Wallets;
 using SecureWallet.Application.Interfaces.Repositories;
@@ -16,17 +17,20 @@ public class CreateSupportAccountHandler
     private readonly IRoleRepository _roleRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IValidator<CreateSupportAccountCommand> _validator;
+    private readonly ILogger<CreateSupportAccountHandler> _logger;
 
     public CreateSupportAccountHandler(
         IUserRepository userRepository,
         IRoleRepository roleRepository,
         IPasswordHasher passwordHasher,
-        IValidator<CreateSupportAccountCommand> validator)
+        IValidator<CreateSupportAccountCommand> validator,
+        ILogger<CreateSupportAccountHandler> logger)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
         _passwordHasher = passwordHasher;
         _validator = validator;
+        _logger = logger;
     }
 
     public async Task<SupportAccountResultDto> Handle(CreateSupportAccountCommand command, CancellationToken cancellationToken = default)
@@ -48,7 +52,8 @@ public class CreateSupportAccountHandler
         Role? supportRole = await _roleRepository.GetByNameAsync("Support", cancellationToken);
         if (supportRole is null)
         {
-            throw new InvalidOperationException("Не беше намерена ролята Support.");
+            _logger.LogError("Създаването на support акаунт се провали, защото не беше намерена ролята 'Support'.");
+            throw new InvalidOperationException("Възникна проблем. Опитай по-късно.");
         }
 
         User supportUser = new()
@@ -82,7 +87,7 @@ public class CreateSupportAccountHandler
             Username = supportUser.Username,
             Email = supportUser.Email,
             Role = supportRole.Name,
-            Message = "Support акаунтът е създаден. При първи login ще се изисква настройка на временния код."
+            Message = "Support акаунтът е създаден. При първи вход ще се изиска настройка на временния код."
         };
     }
 }

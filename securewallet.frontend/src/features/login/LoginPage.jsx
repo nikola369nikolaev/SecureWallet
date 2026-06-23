@@ -96,7 +96,7 @@ export function LoginPage() {
         const nextRequiresTotp = Boolean(error.payload?.requiresTotp);
         const nextRequiresCaptcha = Boolean(error.payload?.requiresCaptcha);
         const nextRequiresEmailVerification = Boolean(error.payload?.requiresEmailVerification);
-        const nextMessage = error.payload?.message ?? error.message;
+        const nextMessage = error.message;
         const shouldOpenTotpStep = nextRequiresTotp && !nextRequiresEmailVerification;
         const isTotpStepPrompt = nextRequiresTotp && !formState.totpCode;
 
@@ -149,7 +149,7 @@ export function LoginPage() {
       }));
     } catch (error) {
       if (error instanceof ApiError) {
-        setErrorMessage(error.payload?.message ?? error.message);
+        setErrorMessage(error.message);
       } else {
         setErrorMessage('Възникна проблем при изпращане на нов код. Опитай отново.');
       }

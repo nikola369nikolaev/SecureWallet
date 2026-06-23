@@ -117,7 +117,7 @@ export function RegisterPage() {
       });
     } catch (error) {
       if (error instanceof ApiError) {
-        setErrorMessage(error.payload?.message ?? error.message);
+        setErrorMessage(error.message);
       } else {
         setErrorMessage('Възникна проблем при регистрацията. Опитай отново.');
       }

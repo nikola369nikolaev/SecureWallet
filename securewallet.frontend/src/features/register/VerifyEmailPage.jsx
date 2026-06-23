@@ -55,7 +55,7 @@ export function VerifyEmailPage() {
       navigate('/security/two-factor', { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
-        setErrorMessage(error.payload?.message ?? error.message);
+        setErrorMessage(error.message);
       } else {
         setErrorMessage('Възникна проблем при потвърждаване на имейла. Опитай отново.');
       }
@@ -75,7 +75,7 @@ export function VerifyEmailPage() {
       setCooldownSeconds(RESEND_COOLDOWN_SECONDS);
     } catch (error) {
       if (error instanceof ApiError) {
-        setErrorMessage(error.payload?.message ?? error.message);
+        setErrorMessage(error.message);
       } else {
         setErrorMessage('Възникна проблем при изпращане на нов код. Опитай отново.');
       }

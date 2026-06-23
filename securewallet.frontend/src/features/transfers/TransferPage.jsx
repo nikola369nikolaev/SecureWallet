@@ -209,7 +209,7 @@ export function TransferPage() {
           return;
         }
 
-        setConfirmErrorMessage(error.payload?.message ?? error.message);
+        setConfirmErrorMessage(error.message);
       } else {
         setConfirmErrorMessage('Възникна проблем при изпращане на превода. Опитай отново.');
       }

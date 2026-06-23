@@ -29,7 +29,15 @@ public class SmtpEmailVerificationSender : IEmailVerificationSender
             string.IsNullOrWhiteSpace(_options.Password) ||
             string.IsNullOrWhiteSpace(_options.FromEmail))
         {
-            throw new InvalidOperationException("Имейл верификацията не е конфигурирана. Попълни Имейл настройките в API appsettings.json.");
+            _logger.LogError(
+                "Имейл верификацията не е конфигурирана. Хост: {HasHost}, Порт: {Port}, Потребител: {HasUsername}, Парола: {HasPassword}, FromEmail: {HasFromEmail}.",
+                !string.IsNullOrWhiteSpace(_options.SmtpClient),
+                _options.SmtpPort,
+                !string.IsNullOrWhiteSpace(_options.Username),
+                !string.IsNullOrWhiteSpace(_options.Password),
+                !string.IsNullOrWhiteSpace(_options.FromEmail));
+
+            throw new InvalidOperationException("Услугата временно не е достъпна. Опитай по-късно.");
         }
 
         MimeMessage message = new();
@@ -68,7 +76,7 @@ public class SmtpEmailVerificationSender : IEmailVerificationSender
         {
             _logger.LogError(
                 exception,
-                "Email verification send failed for recipient {RecipientEmail}. SMTP host: {SmtpHost}, port: {SmtpPort}.",
+                "Изпращането на имейл за потвърждение се провали за {RecipientEmail}. SMTP хост: {SmtpHost}, порт: {SmtpPort}.",
                 email,
                 _options.SmtpClient,
                 _options.SmtpPort);

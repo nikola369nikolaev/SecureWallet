@@ -108,7 +108,7 @@ export function TwoFactorSetupPage() {
       });
     } catch (error) {
       if (error instanceof ApiError) {
-        setErrorMessage(error.payload?.message ?? error.message);
+        setErrorMessage(error.message);
       } else {
         setErrorMessage('Възникна проблем при потвърждаване на временния код. Опитай отново.');
       }
@@ -135,7 +135,7 @@ export function TwoFactorSetupPage() {
       navigate('/dashboard', { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
-        setErrorMessage(error.payload?.message ?? error.message);
+        setErrorMessage(error.message);
       } else {
         setErrorMessage('Възникна проблем при изключване на двуфакторната защита. Опитай отново.');
       }
@@ -158,7 +158,7 @@ export function TwoFactorSetupPage() {
       setSuccessMessage(result.message ?? 'Подготвен е нов QR код. Потвърди го с код от новото приложение.');
     } catch (error) {
       if (error instanceof ApiError) {
-        setErrorMessage(error.payload?.message ?? error.message);
+        setErrorMessage(error.message);
       } else {
         setErrorMessage('Възникна проблем при подмяна на настройката на двуфакторната защита. Опитай отново.');
       }

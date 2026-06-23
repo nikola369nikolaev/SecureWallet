@@ -86,7 +86,7 @@ export function AuthProvider({ children }) {
       setRenewalError('');
     } catch (error) {
       if (error instanceof ApiError) {
-        setRenewalError(error.payload?.message ?? error.message);
+        setRenewalError(error.message);
       } else {
         setRenewalError('Възникна проблем при подновяване на сесията. Опитай отново.');
       }

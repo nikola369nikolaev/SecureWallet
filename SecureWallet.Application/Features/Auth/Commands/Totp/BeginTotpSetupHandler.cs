@@ -12,15 +12,18 @@ public class BeginTotpSetupHandler
     private readonly IUserRepository _userRepository;
     private readonly IQrCodeService _qrCodeService;
     private readonly ITotpService _totpService;
+    private readonly ITotpSecretProtector _totpSecretProtector;
 
     public BeginTotpSetupHandler(
         IUserRepository userRepository,
         ITotpService totpService,
-        IQrCodeService qrCodeService)
+        IQrCodeService qrCodeService,
+        ITotpSecretProtector totpSecretProtector)
     {
         _userRepository = userRepository;
         _totpService = totpService;
         _qrCodeService = qrCodeService;
+        _totpSecretProtector = totpSecretProtector;
     }
 
     public async Task<TotpSetupDto> Handle(Guid userId, CancellationToken cancellationToken = default)
@@ -41,15 +44,21 @@ public class BeginTotpSetupHandler
             };
         }
 
+        string pendingSecret;
         if (string.IsNullOrWhiteSpace(user.PendingTotpSecret))
         {
-            user.PendingTotpSecret = _totpService.GenerateSecret();
+            pendingSecret = _totpService.GenerateSecret();
+            user.PendingTotpSecret = _totpSecretProtector.Protect(pendingSecret);
             user.UpdatedAtUtc = DateTime.UtcNow;
             await _userRepository.UpdateAsync(user, cancellationToken);
         }
+        else
+        {
+            pendingSecret = _totpSecretProtector.Unprotect(user.PendingTotpSecret);
+        }
 
         string accountName = user.Email;
-        string setupCodeUri = _totpService.BuildSetupCodeUri(IssuerName, accountName, user.PendingTotpSecret);
+        string setupCodeUri = _totpService.BuildSetupCodeUri(IssuerName, accountName, pendingSecret);
         string qrCodeImageDataUri = _qrCodeService.GenerateSvgDataUri(setupCodeUri);
 
         return new TotpSetupDto
@@ -57,7 +66,7 @@ public class BeginTotpSetupHandler
             IsAlreadyEnabled = false,
             CanShowQrCode = true,
             Message = "Сканирай QR кода или въведи ключа ръчно в приложението за временни кодове.",
-            ManualEntryKey = user.PendingTotpSecret,
+            ManualEntryKey = pendingSecret,
             SetupCodeUri = setupCodeUri,
             QrCodeImageDataUri = qrCodeImageDataUri
         };

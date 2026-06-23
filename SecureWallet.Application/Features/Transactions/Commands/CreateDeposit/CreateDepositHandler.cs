@@ -14,6 +14,7 @@ public class CreateDepositHandler
     private readonly IWalletRepository _walletRepository;
     private readonly ITransactionRepository _transactionRepository;
     private readonly ITotpService _totpService;
+    private readonly ITotpSecretProtector _totpSecretProtector;
     private readonly IValidator<CreateDepositCommand> _validator;
 
     public CreateDepositHandler(
@@ -21,12 +22,14 @@ public class CreateDepositHandler
         IWalletRepository walletRepository,
         ITransactionRepository transactionRepository,
         ITotpService totpService,
+        ITotpSecretProtector totpSecretProtector,
         IValidator<CreateDepositCommand> validator)
     {
         _userRepository = userRepository;
         _walletRepository = walletRepository;
         _transactionRepository = transactionRepository;
         _totpService = totpService;
+        _totpSecretProtector = totpSecretProtector;
         _validator = validator;
     }
 
@@ -45,7 +48,8 @@ public class CreateDepositHandler
             throw new InvalidOperationException("Двуфакторната защита не е включена за този акаунт.");
         }
 
-        bool isTotpCodeValid = _totpService.VerifyCode(user.TotpSecret, command.TotpCode);
+        string decryptedTotpSecret = _totpSecretProtector.Unprotect(user.TotpSecret);
+        bool isTotpCodeValid = _totpService.VerifyCode(decryptedTotpSecret, command.TotpCode);
         if (!isTotpCodeValid)
         {
             throw new InvalidOperationException("Временният код е грешен.");

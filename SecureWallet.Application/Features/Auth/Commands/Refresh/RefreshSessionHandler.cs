@@ -13,6 +13,7 @@ public class RefreshSessionHandler
     private readonly IUserRepository _userRepository;
     private readonly IJwtTokenService _jwtTokenService;
     private readonly ITotpService _totpService;
+    private readonly ITotpSecretProtector _totpSecretProtector;
     private readonly AuthSessionIssuer _authSessionIssuer;
     private readonly IValidator<RefreshSessionCommand> _validator;
 
@@ -20,12 +21,14 @@ public class RefreshSessionHandler
         IUserRepository userRepository,
         IJwtTokenService jwtTokenService,
         ITotpService totpService,
+        ITotpSecretProtector totpSecretProtector,
         AuthSessionIssuer authSessionIssuer,
         IValidator<RefreshSessionCommand> validator)
     {
         _userRepository = userRepository;
         _jwtTokenService = jwtTokenService;
         _totpService = totpService;
+        _totpSecretProtector = totpSecretProtector;
         _authSessionIssuer = authSessionIssuer;
         _validator = validator;
     }
@@ -48,7 +51,8 @@ public class RefreshSessionHandler
             throw new InvalidOperationException("Сесията не може да бъде подновена. Моля влез отново.");
         }
 
-        bool isTotpCodeValid = _totpService.VerifyCode(user.TotpSecret, command.TotpCode);
+        string decryptedTotpSecret = _totpSecretProtector.Unprotect(user.TotpSecret);
+        bool isTotpCodeValid = _totpService.VerifyCode(decryptedTotpSecret, command.TotpCode);
         if (!isTotpCodeValid)
         {
             throw new InvalidOperationException("Временният код е грешен.");

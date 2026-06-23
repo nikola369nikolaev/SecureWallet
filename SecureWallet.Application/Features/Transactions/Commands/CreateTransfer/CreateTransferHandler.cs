@@ -18,6 +18,7 @@ public class CreateTransferHandler
     private readonly IUserRepository _userRepository;
     private readonly ITransactionRepository _transactionRepository;
     private readonly ITotpService _totpService;
+    private readonly ITotpSecretProtector _totpSecretProtector;
     private readonly IValidator<CreateTransferCommand> _validator;
 
     public CreateTransferHandler(
@@ -25,12 +26,14 @@ public class CreateTransferHandler
         IUserRepository userRepository,
         ITransactionRepository transactionRepository,
         ITotpService totpService,
+        ITotpSecretProtector totpSecretProtector,
         IValidator<CreateTransferCommand> validator)
     {
         _walletRepository = walletRepository;
         _userRepository = userRepository;
         _transactionRepository = transactionRepository;
         _totpService = totpService;
+        _totpSecretProtector = totpSecretProtector;
         _validator = validator;
     }
 
@@ -49,7 +52,8 @@ public class CreateTransferHandler
             throw new InvalidOperationException("Двуфакторната защита не е включена за този акаунт.");
         }
 
-        bool isTotpCodeValid = _totpService.VerifyCode(senderUser.TotpSecret, command.TotpCode);
+        string decryptedTotpSecret = _totpSecretProtector.Unprotect(senderUser.TotpSecret);
+        bool isTotpCodeValid = _totpService.VerifyCode(decryptedTotpSecret, command.TotpCode);
         if (!isTotpCodeValid)
         {
             throw new InvalidOperationException("Временният код е грешен.");

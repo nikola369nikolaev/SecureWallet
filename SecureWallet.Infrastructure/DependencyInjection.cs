@@ -33,6 +33,7 @@ public static class DependencyInjection
         services.AddScoped<ICaptchaVerificationService, TestCaptchaVerificationService>();
         services.AddScoped<ISmsVerificationService, TestSmsVerificationService>();
         services.AddScoped<ITotpService, TotpService>();
+        services.AddSingleton<ITotpSecretProtector, TotpSecretProtector>();
         services.AddScoped<IQrCodeService, QrCodeService>();
         services.AddScoped<IEmailVerificationSender, SmtpEmailVerificationSender>();
 

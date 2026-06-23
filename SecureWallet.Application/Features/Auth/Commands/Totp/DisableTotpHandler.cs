@@ -11,15 +11,18 @@ public class DisableTotpHandler
 {
     private readonly IUserRepository _userRepository;
     private readonly ITotpService _totpService;
+    private readonly ITotpSecretProtector _totpSecretProtector;
     private readonly IValidator<DisableTotpCommand> _validator;
 
     public DisableTotpHandler(
         IUserRepository userRepository,
         ITotpService totpService,
+        ITotpSecretProtector totpSecretProtector,
         IValidator<DisableTotpCommand> validator)
     {
         _userRepository = userRepository;
         _totpService = totpService;
+        _totpSecretProtector = totpSecretProtector;
         _validator = validator;
     }
 
@@ -38,7 +41,8 @@ public class DisableTotpHandler
             throw new InvalidOperationException("Двуфакторната защита не е включена за този акаунт.");
         }
 
-        bool isCodeValid = _totpService.VerifyCode(user.TotpSecret, command.Code);
+        string activeSecret = _totpSecretProtector.Unprotect(user.TotpSecret);
+        bool isCodeValid = _totpService.VerifyCode(activeSecret, command.Code);
         if (!isCodeValid)
         {
             throw new InvalidOperationException("Временният код е грешен.");

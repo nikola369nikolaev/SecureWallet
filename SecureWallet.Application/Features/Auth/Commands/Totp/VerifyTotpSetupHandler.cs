@@ -11,17 +11,20 @@ public class VerifyTotpSetupHandler
 {
     private readonly IUserRepository _userRepository;
     private readonly ITotpService _totpService;
+    private readonly ITotpSecretProtector _totpSecretProtector;
     private readonly AuthSessionIssuer _authSessionIssuer;
     private readonly IValidator<VerifyTotpSetupCommand> _validator;
 
     public VerifyTotpSetupHandler(
         IUserRepository userRepository,
         ITotpService totpService,
+        ITotpSecretProtector totpSecretProtector,
         AuthSessionIssuer authSessionIssuer,
         IValidator<VerifyTotpSetupCommand> validator)
     {
         _userRepository = userRepository;
         _totpService = totpService;
+        _totpSecretProtector = totpSecretProtector;
         _authSessionIssuer = authSessionIssuer;
         _validator = validator;
     }
@@ -41,7 +44,8 @@ public class VerifyTotpSetupHandler
             throw new InvalidOperationException("Няма активна настройка на временен код за този акаунт.");
         }
 
-        bool isCodeValid = _totpService.VerifyCode(user.PendingTotpSecret, command.Code);
+        string pendingSecret = _totpSecretProtector.Unprotect(user.PendingTotpSecret);
+        bool isCodeValid = _totpService.VerifyCode(pendingSecret, command.Code);
         if (!isCodeValid)
         {
             throw new InvalidOperationException("Временният код е грешен.");

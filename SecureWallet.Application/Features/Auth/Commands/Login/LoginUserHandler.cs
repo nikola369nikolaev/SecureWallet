@@ -19,6 +19,7 @@ public class LoginUserHandler
     private readonly AuthSessionIssuer _authSessionIssuer;
     private readonly ICaptchaVerificationService _captchaVerificationService;
     private readonly ITotpService _totpService;
+    private readonly ITotpSecretProtector _totpSecretProtector;
     private readonly IValidator<LoginUserCommand> _validator;
 
     public LoginUserHandler(
@@ -27,6 +28,7 @@ public class LoginUserHandler
         AuthSessionIssuer authSessionIssuer,
         ICaptchaVerificationService captchaVerificationService,
         ITotpService totpService,
+        ITotpSecretProtector totpSecretProtector,
         IValidator<LoginUserCommand> validator)
     {
         _userRepository = userRepository;
@@ -34,6 +36,7 @@ public class LoginUserHandler
         _authSessionIssuer = authSessionIssuer;
         _captchaVerificationService = captchaVerificationService;
         _totpService = totpService;
+        _totpSecretProtector = totpSecretProtector;
         _validator = validator;
     }
 
@@ -159,8 +162,9 @@ public class LoginUserHandler
                 failedAttemptCount: user.FailedLoginAttempts);
         }
 
-        bool isTotpCodeValid = !string.IsNullOrWhiteSpace(user.TotpSecret) &&
-                               _totpService.VerifyCode(user.TotpSecret, command.TotpCode);
+        string encryptedTotpSecret = user.TotpSecret!;
+        string decryptedTotpSecret = _totpSecretProtector.Unprotect(encryptedTotpSecret);
+        bool isTotpCodeValid = _totpService.VerifyCode(decryptedTotpSecret, command.TotpCode);
 
         if (!isTotpCodeValid)
         {

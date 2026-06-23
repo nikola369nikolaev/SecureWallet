@@ -13,17 +13,20 @@ public class ResetTotpSetupHandler
 
     private readonly IUserRepository _userRepository;
     private readonly ITotpService _totpService;
+    private readonly ITotpSecretProtector _totpSecretProtector;
     private readonly IQrCodeService _qrCodeService;
     private readonly IValidator<ResetTotpSetupCommand> _validator;
 
     public ResetTotpSetupHandler(
         IUserRepository userRepository,
         ITotpService totpService,
+        ITotpSecretProtector totpSecretProtector,
         IQrCodeService qrCodeService,
         IValidator<ResetTotpSetupCommand> validator)
     {
         _userRepository = userRepository;
         _totpService = totpService;
+        _totpSecretProtector = totpSecretProtector;
         _qrCodeService = qrCodeService;
         _validator = validator;
     }
@@ -43,18 +46,20 @@ public class ResetTotpSetupHandler
             throw new InvalidOperationException("Двуфакторната защита не е включена за този акаунт.");
         }
 
-        bool isCodeValid = _totpService.VerifyCode(user.TotpSecret, command.Code);
+        string activeSecret = _totpSecretProtector.Unprotect(user.TotpSecret);
+        bool isCodeValid = _totpService.VerifyCode(activeSecret, command.Code);
         if (!isCodeValid)
         {
             throw new InvalidOperationException("Временният код е грешен.");
         }
 
-        user.PendingTotpSecret = _totpService.GenerateSecret();
+        string pendingSecret = _totpService.GenerateSecret();
+        user.PendingTotpSecret = _totpSecretProtector.Protect(pendingSecret);
         user.UpdatedAtUtc = DateTime.UtcNow;
 
         await _userRepository.UpdateAsync(user, cancellationToken);
 
-        string setupCodeUri = _totpService.BuildSetupCodeUri(IssuerName, user.Email, user.PendingTotpSecret);
+        string setupCodeUri = _totpService.BuildSetupCodeUri(IssuerName, user.Email, pendingSecret);
         string qrCodeImageDataUri = _qrCodeService.GenerateSvgDataUri(setupCodeUri);
 
         return new TotpSetupDto
@@ -62,7 +67,7 @@ public class ResetTotpSetupHandler
             IsAlreadyEnabled = false,
             CanShowQrCode = true,
             Message = "Старият временен код остава активен, докато не потвърдиш новия код.",
-            ManualEntryKey = user.PendingTotpSecret,
+            ManualEntryKey = pendingSecret,
             SetupCodeUri = setupCodeUri,
             QrCodeImageDataUri = qrCodeImageDataUri
         };
